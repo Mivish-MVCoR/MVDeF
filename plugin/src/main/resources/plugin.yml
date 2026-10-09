@@ -1,0 +1,27 @@
+name: MVDeF
+version: '1.0'
+main: com.mvdef.plugin.MVDeFPlugin
+api-version: '1.19'
+author: Mivish
+description: MVDeF Territorial Empire System - Server Connector
+
+commands:
+  /empire:
+    description: Отримати посилання на сайт MVDeF
+    usage: //empire
+  /ckey:
+    description: Замкнути двері/скриню/хвіртку/бочку кодовим словом
+    usage: //ckey <кодове_слово>
+  /dkey:
+    description: Розблокувати двері/скриню/хвіртку/бочку
+    usage: //dkey <кодове_слово>
+  /listallplayer:
+    description: Список усіх гравців та видалення їх даних
+    usage: "//listallplayer [сторінка] або //listallplayer remove <нік>"
+permissions:
+  mvdef.players.list:
+    description: Перегляд списку гравців
+    default: op
+  mvdef.players.remove:
+    description: Видалення даних гравця
+    default: op
