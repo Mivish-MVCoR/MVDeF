@@ -1,0 +1,39 @@
+#mapContainer {
+    width: 100%;
+    height: calc(100vh - 100px);
+    overflow: hidden;
+    position: relative;
+}
+
+#mapCanvas {
+    cursor: crosshair;
+    display: block;
+}
+
+.map-toolbar {
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    height: 48px;
+}
+
+.map-toolbar span {
+    color: #a0a0b0;
+    font-size: 0.9rem;
+}
+
+.tooltip {
+    position: fixed;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    color: #e0e0e0;
+    pointer-events: none;
+    display: none;
+    z-index: 100;
+}

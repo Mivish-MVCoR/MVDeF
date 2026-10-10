@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Кабінет</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <div class="navbar">
+        <h1>⚑ MVDeF</h1>
+        <nav>
+            <a href="cabinet.html">Кабінет</a>
+            <a href="map.html">Карта</a>
+            <a href="#" id="logoutBtn">Вийти</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="card" id="empireCard">
+            <h2>Моя імперія</h2>
+            <div id="empireInfo">Завантаження...</div>
+        </div>
+
+        <div class="card">
+            <h2>Сповіщення</h2>
+            <div id="notifications">Завантаження...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db } from './js/firebase.js';
+        import { ref, get, query, orderByChild, equalTo, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const uuid = sessionStorage.getItem('uuid');
+        const playerName = sessionStorage.getItem('playerName');
+
+        if (!uuid) {
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        });
+
+        // Завантажуємо імперію
+        const empiresRef = ref(db, 'mvdef/empires');
+        get(empiresRef).then(snapshot => {
+            const empireInfo = document.getElementById('empireInfo');
+            let found = false;
+
+            snapshot.forEach(child => {
+                const empire = child.val();
+                if (empire.ownerUuid === uuid) {
+                    found = true;
+
+                    // Рахуємо чанки
+                    get(ref(db, 'mvdef/chunks')).then(chunksSnap => {
+                        let chunkCount = 0;
+                        chunksSnap.forEach(chunk => {
+                            if (chunk.val().empireId === child.key && chunk.val().status === 'active') {
+                                chunkCount++;
+                            }
+                        });
+
+                        empireInfo.innerHTML = `
+                            <p><strong>Назва:</strong> ${empire.name}</p>
+                            <p><strong>Імператор:</strong> ${empire.ownerName}</p>
+                            <p><strong>Чанків:</strong> ${chunkCount}</p>
+                            <br>
+                            <a href="map.html" class="btn btn-primary">Відкрити карту</a>
+                        `;
+                    });
+                }
+            });
+
+            if (!found) {
+                empireInfo.innerHTML = `
+                    <p>У вас немає імперії.</p>
+                    <br>
+                    <p style="color:#a0a0b0; font-size:0.9rem;">Зверніться до адміністратора сервера для створення імперії.</p>
+                `;
+            }
+        });
+
+        // Завантажуємо сповіщення
+        const notifRef = ref(db, `mvdef/notifications/${uuid}`);
+        get(notifRef).then(snapshot => {
+            const notifDiv = document.getElementById('notifications');
+
+            if (!snapshot.exists()) {
+                notifDiv.innerHTML = '<p style="color:#a0a0b0;">Сповіщень немає.</p>';
+                return;
+            }
+
+            let html = '';
+            const updates = {};
+
+            snapshot.forEach(child => {
+                const n = child.val();
+                const cls = n.read ? 'notification' : 'notification unread';
+                html += `<div class="${cls}">${n.message}</div>`;
+                if (!n.read) {
+                    updates[`mvdef/notifications/${uuid}/${child.key}/read`] = true;
+                }
+            });
+
+            notifDiv.innerHTML = html;
+            if (Object.keys(updates).length > 0) {
+                update(ref(db), updates);
+            }
+        });
+    </script>
+</body>
+</html>
