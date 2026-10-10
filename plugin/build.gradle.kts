@@ -14,6 +14,7 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.19.4-R0.1-SNAPSHOT")
     implementation(kotlin("stdlib"))
+    implementation("com.google.firebase:firebase-admin:9.3.0")
 }
 
 kotlin {
