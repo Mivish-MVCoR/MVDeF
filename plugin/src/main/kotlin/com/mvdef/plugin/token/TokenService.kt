@@ -1,14 +1,10 @@
 package com.mvdef.plugin.token
 
+import com.google.firebase.database.DatabaseException
+import com.google.firebase.database.FirebaseDatabase
 import org.bukkit.plugin.java.JavaPlugin
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.security.SecureRandom
-import java.time.Duration
 import java.util.UUID
-import java.util.logging.Level
 
 class TokenService(private val plugin: JavaPlugin) {
 
@@ -19,50 +15,38 @@ class TokenService(private val plugin: JavaPlugin) {
     }
 
     private val random = SecureRandom()
-
-    private val httpClient: HttpClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(5))
-        .build()
+    private val database = FirebaseDatabase.getInstance()
 
     fun createSessionAsync(playerUuid: UUID, playerName: String, callback: (String?) -> Unit) {
         val token = generateToken()
-        val websiteUrl = plugin.config.getString("website-url")
+        val expiresAt = (System.currentTimeMillis() / 1000) + plugin.config.getLong("token-expiry-seconds", 300)
 
-        val jsonBody = """
-            {"action":"createSession","token":"$token","uuid":"$playerUuid","name":"$playerName"}
-        """.trimIndent()
+        val tokenData = mapOf(
+            "uuid" to playerUuid.toString(),
+            "playerName" to playerName,
+            "expiresAt" to expiresAt
+        )
 
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create(websiteUrl))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-            .timeout(Duration.ofSeconds(8))
-            .build()
-
-        httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-            .thenAccept { response ->
-                val success = response.statusCode() == 200
+        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+            try {
+                database.getReference("mvdef/tokens/$token")
+                    .setValueAsync(tokenData)
+                    .get()
 
                 plugin.server.scheduler.runTask(plugin, Runnable {
-                    if (success) {
-                        callback(token)
-                    } else {
-                        plugin.logger.log(Level.WARNING,
-                            "Не вдалося створити сесію на сайті. Код відповіді: ${response.statusCode()}")
-                        callback(null)
-                    }
+                    callback(token)
+                })
+            } catch (e: Exception) {
+                plugin.logger.severe("Помилка запису токена у Firebase: ${e.message}")
+                plugin.server.scheduler.runTask(plugin, Runnable {
+                    callback(null)
                 })
             }
-            .exceptionally { ex ->
-                plugin.logger.log(Level.SEVERE, "Помилка з'єднання з сайтом MVDeF", ex)
-                plugin.server.scheduler.runTask(plugin, Runnable { callback(null) })
-                null
-            }
+        })
     }
 
     fun buildLoginUrl(token: String): String {
-        val websiteUrl = plugin.config.getString("website-url")
-        return "$websiteUrl?token=$token"
+        return "https://mivish-mvcor.github.io/MVDeF/login.html?token=$token"
     }
 
     private fun generateToken(): String =
