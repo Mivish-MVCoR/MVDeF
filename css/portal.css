@@ -29,32 +29,38 @@ body {
 .navbar {
     position: relative;
     z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     min-height: 72px;
-    padding: 12px clamp(18px, 4.5vw, 60px);
+    padding: 12px clamp(18px, 4.5vw, 60px) 12px max(54px, clamp(18px, 4.5vw, 60px));
     background: rgba(9, 14, 12, 0.97);
     border-bottom: 1px solid var(--line);
 }
 
 .navbar .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     color: var(--text);
-    font-size: 1.15rem;
-    letter-spacing: 0.02em;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
 }
 
 .navbar .logo span {
-    width: 18px;
-    height: 18px;
+    display: inline-block;
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
     border-radius: 2px;
-    background:
-        linear-gradient(var(--green), var(--green)) 0 0 / 8px 8px no-repeat,
-        linear-gradient(rgba(167, 217, 154, 0.45), rgba(167, 217, 154, 0.45)) 10px 0 / 8px 8px no-repeat,
-        linear-gradient(rgba(167, 217, 154, 0.45), rgba(167, 217, 154, 0.45)) 0 10px / 8px 8px no-repeat,
-        linear-gradient(var(--green), var(--green)) 10px 10px / 8px 8px no-repeat;
+    background: var(--green-strong);
 }
 
 .navbar nav {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: clamp(14px, 2.5vw, 30px);
 }
 
@@ -62,6 +68,8 @@ body {
     margin-left: 0;
     color: var(--muted);
     font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
 }
 
 .navbar nav a:hover {
@@ -867,6 +875,7 @@ body:has(#mapCanvas) .navbar {
 
 .management-page {
     max-width: 1180px;
+    margin-inline: auto;
 }
 
 .page-title {
@@ -1238,6 +1247,221 @@ body:has(#mapCanvas) .navbar {
     height: auto;
 }
 
+body[data-empire-mode="edit"] .management-page {
+    max-width: 960px;
+    margin-inline: auto;
+}
+
+body[data-empire-mode="edit"] .page-title {
+    text-align: center;
+}
+
+body[data-empire-mode="edit"] .empire-layout {
+    max-width: 900px;
+    margin-inline: auto;
+}
+
+.roles-layout {
+    grid-template-columns: minmax(320px, 1fr) minmax(0, 2fr);
+}
+
+.roles-map-card {
+    display: flex;
+    height: calc(100vh - 150px);
+    height: calc(100dvh - 150px);
+    min-height: 460px;
+    flex-direction: column;
+}
+
+.roles-map-frame {
+    display: grid;
+    flex: 1 1 auto;
+    min-height: 0;
+    place-items: center;
+}
+
+.roles-map-frame canvas {
+    width: min(100%, calc(100dvh - 270px));
+    max-height: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+}
+
+html {
+    --theme-transition-cover: #0b100e;
+    --theme-dark-cover: #0b100e;
+    --theme-light-cover: #f4f7f4;
+}
+
+.theme-toggle {
+    position: fixed;
+    z-index: 10000;
+    top: 12px;
+    left: 12px;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface-raised);
+    color: var(--green);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    font: inherit;
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.theme-toggle:hover {
+    border-color: var(--green-strong);
+}
+
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--green-strong);
+    outline-offset: 3px;
+}
+
+html.theme-changing::after {
+    position: fixed;
+    z-index: 9999;
+    inset: 0;
+    background: var(--theme-transition-cover);
+    content: "";
+    pointer-events: none;
+    animation: theme-wipe 720ms cubic-bezier(0.22, 0.72, 0.2, 1) forwards;
+}
+
+@keyframes theme-wipe {
+    from {
+        clip-path: circle(150vmax at 100% 0);
+    }
+
+    to {
+        clip-path: circle(0 at 100% 0);
+    }
+}
+
+html[data-theme="light"] {
+    color-scheme: light;
+    --page: #f3f6f3;
+    --surface: #ffffff;
+    --surface-raised: #edf2ed;
+    --line: rgba(45, 65, 49, 0.17);
+    --text: #202a22;
+    --muted: #657267;
+    --green: #2d7138;
+    --green-strong: #388747;
+    --red: #b53d3d;
+}
+
+html[data-theme="light"] body {
+    color: var(--text);
+    background:
+        linear-gradient(rgba(243, 246, 243, 0.93), rgba(243, 246, 243, 0.96)),
+        linear-gradient(rgba(54, 88, 60, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(54, 88, 60, 0.07) 1px, transparent 1px),
+        var(--page);
+    background-size: auto, 52px 52px, 52px 52px, auto;
+}
+
+html[data-theme="light"] .navbar {
+    background: rgba(255, 255, 255, 0.96);
+}
+
+html[data-theme="light"] .navbar .logo,
+html[data-theme="light"] .navbar nav a#logoutBtn {
+    color: var(--text);
+}
+
+html[data-theme="light"] .navbar nav a:hover {
+    color: var(--green);
+}
+
+html[data-theme="light"] .navbar nav .system-mode-link {
+    color: var(--green);
+    background: rgba(56, 135, 71, 0.08);
+}
+
+html[data-theme="light"] .navbar nav .system-mode-link:hover {
+    color: #245d2e;
+}
+
+html[data-theme="light"] .card,
+html[data-theme="light"] .request-card,
+html[data-theme="light"] .auth-box,
+html[data-theme="light"] .roles-map-card {
+    background: linear-gradient(145deg, #ffffff, #f8faf8);
+    box-shadow: 0 12px 36px rgba(40, 60, 43, 0.08);
+}
+
+html[data-theme="light"] .map-toolbar {
+    background: rgba(255, 255, 255, 0.97);
+}
+
+html[data-theme="light"] .map-workspace,
+html[data-theme="light"] #mapContainer,
+html[data-theme="light"] .roles-map-frame {
+    background: #e8eee8;
+}
+
+html[data-theme="light"] .map-sidebar {
+    background: linear-gradient(155deg, #ffffff, #f2f6f2);
+}
+
+html[data-theme="light"] .legend,
+html[data-theme="light"] .tooltip,
+html[data-theme="light"] .request-minimap {
+    background: rgba(255, 255, 255, 0.97);
+    color: var(--text);
+    box-shadow: 0 10px 32px rgba(40, 60, 43, 0.18);
+}
+
+html[data-theme="light"] .tooltip-details span,
+html[data-theme="light"] .notif-item,
+html[data-theme="light"] .creation-message > p:last-child,
+html[data-theme="light"] .government-info > p:not(.card-label) {
+    color: #4f5e52;
+}
+
+html[data-theme="light"] .form-field input:not([type="color"]):not([type="file"]),
+html[data-theme="light"] .form-field textarea,
+html[data-theme="light"] .form-field select {
+    background: #ffffff;
+}
+
+html[data-theme="light"] .map-image-button,
+html[data-theme="light"] .map-image-remove,
+html[data-theme="light"] .btn-secondary,
+html[data-theme="light"] .text-button,
+html[data-theme="light"] .theme-toggle {
+    background: #f7faf7;
+    color: var(--text);
+}
+
+html[data-theme="light"] .toast {
+    background: #ffffff;
+    color: var(--text);
+}
+
+html[data-theme="light"] .status-online {
+    color: var(--green);
+    background: rgba(56, 135, 71, 0.08);
+}
+
+@media (max-width: 680px) {
+    .navbar {
+        padding-left: 54px;
+    }
+
+    .roles-map-card {
+        height: min(75vh, 720px);
+        min-height: 360px;
+    }
+}
+
 @media (max-width: 760px) {
     .management-layout,
     .roles-layout {
@@ -1247,12 +1471,26 @@ body:has(#mapCanvas) .navbar {
     .roles-map-card {
         position: static;
     }
+
+    .roles-map-card {
+        height: auto;
+    }
+
+    .roles-map-frame canvas {
+        width: min(100%, 70vh);
+    }
 }
 
 @media (max-width: 540px) {
     .form-grid {
         grid-template-columns: 1fr;
         gap: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        html.theme-changing::after {
+            animation-duration: 1ms;
+        }
     }
 
     .section-heading-row {
