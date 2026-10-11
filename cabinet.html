@@ -198,7 +198,10 @@
 </head>
 <body>
     <header class="navbar">
-        <div class="logo"><span></span> MVDeF</div>
+        <button class="logo" id="logoButton" type="button" aria-label="Логотип MVDeF">
+            <img class="logo-mark" src="assets/mvdef-mark.svg" alt="">
+            <span class="logo-word">MVDeF</span>
+        </button>
         <nav>
             <a href="cabinet.html">Кабінет</a>
             <a href="map.html">Карта</a>
@@ -207,6 +210,9 @@
             <a href="#" id="logoutBtn">Вийти</a>
         </nav>
     </header>
+    <div class="logo-easter-egg" id="logoEasterEgg" role="status" aria-live="polite" hidden>
+        <p id="logoEasterEggMessage"></p>
+    </div>
 
     <main class="container">
         <div class="greeting">
@@ -248,6 +254,30 @@
         document.getElementById('logoutBtn').addEventListener('click', () => {
             sessionStorage.clear();
             window.location.href = 'login.html';
+        });
+
+        let logoClicks = 0;
+        const logoEasterEggMessages = {
+            5: 'Ну що ти тут робиш, що ти хотів знайти',
+            7: 'Ну що ти хочеш ?',
+            9: 'Ще раз і кінець !'
+        };
+        const logoEasterEgg = document.getElementById('logoEasterEgg');
+        const logoEasterEggMessage = document.getElementById('logoEasterEggMessage');
+
+        document.getElementById('logoButton').addEventListener('click', () => {
+            logoClicks += 1;
+            if (logoClicks === 10) {
+                sessionStorage.clear();
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const message = logoEasterEggMessages[logoClicks];
+            if (message) {
+                logoEasterEggMessage.textContent = message;
+                logoEasterEgg.hidden = false;
+            }
         });
 
         // Завантажуємо імперію

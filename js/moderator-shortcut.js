@@ -1,5 +1,5 @@
 document.addEventListener('keydown', event => {
-    if (!event.ctrlKey || !event.shiftKey || event.key.toLowerCase() !== 'h' || event.repeat) return;
+    if (!event.ctrlKey || !event.shiftKey || event.code !== 'KeyH' || event.repeat) return;
     if (!sessionStorage.getItem('uuid')) return;
 
     const target = event.target;

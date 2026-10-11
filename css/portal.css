@@ -11,6 +11,14 @@
     --red: #ed7777;
 }
 
+@font-face {
+    font-family: Mosk;
+    src: url("../assets/fonts/Mosk-Bold.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -41,20 +49,98 @@ body {
 .navbar .logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--text);
     font-size: 1.2rem;
+    font-family: Mosk, "Segoe UI", sans-serif;
     font-weight: 700;
     letter-spacing: 0.05em;
+    text-align: left;
 }
 
-.navbar .logo span {
+#logoButton {
+    cursor: pointer;
+}
+
+.navbar .logo-mark {
     display: inline-block;
-    flex: 0 0 10px;
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    background: var(--green-strong);
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.navbar .logo-word {
+    display: inline-block;
+    width: auto;
+    height: auto;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    border-radius: 0;
+    background: none;
+    white-space: nowrap;
+    transition: max-width 350ms ease, opacity 220ms ease, margin-left 350ms ease;
+}
+
+.navbar .logo:hover .logo-word,
+.navbar .logo:focus-visible .logo-word {
+    max-width: 5em;
+    margin-left: 10px;
+    opacity: 1;
+}
+
+.navbar .logo-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-easter-egg {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(4, 7, 6, 0.82);
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+    animation: logo-easter-egg-appear 240ms ease-out both;
+}
+
+.logo-easter-egg[hidden] {
+    display: none;
+}
+
+.logo-easter-egg p {
+    max-width: 720px;
+    color: var(--green);
+    font-family: Mosk, "Segoe UI", sans-serif;
+    font-size: clamp(2rem, 8vw, 5rem);
+    line-height: 1.12;
+    text-align: center;
+    text-wrap: balance;
+    text-shadow: 0 0 36px rgba(167, 217, 154, 0.35);
+}
+
+@keyframes logo-easter-egg-appear {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (hover: none) {
+    .navbar .logo {
+        gap: 10px;
+    }
+
+    .navbar .logo-word {
+        max-width: 5em;
+        opacity: 1;
+    }
 }
 
 .navbar nav {
