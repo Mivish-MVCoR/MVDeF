@@ -245,6 +245,18 @@
             window.location.href = 'login.html';
         });
 
+        document.addEventListener('keydown', e => {
+            const target = e.target;
+            if (!e.ctrlKey || !e.shiftKey || e.key.toLowerCase() !== 'h') return;
+            if (target instanceof HTMLElement && (
+                target.isContentEditable ||
+                ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+            )) return;
+
+            e.preventDefault();
+            window.location.href = 'moderator.html';
+        });
+
         // Завантажуємо імперію
         const empiresSnap = await get(ref(db, 'mvdef/empires'));
         let myEmpire = null;

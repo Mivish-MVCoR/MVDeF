@@ -150,19 +150,52 @@
 
     <div class="map-toolbar">
         <span id="coordsInfo">Чанк: —</span>
-        <span id="selectedInfo">Вибрано: 0 чанків</span>
-        <button class="btn-submit" id="submitBtn" style="display:none">Подати заявку</button>
     </div>
 
-    <main id="mapContainer">
-        <canvas id="mapCanvas"></canvas>
+    <main class="map-workspace">
+        <section id="mapContainer" aria-label="Інтерактивна карта чанків">
+            <canvas id="mapCanvas"></canvas>
 
-        <div class="legend">
-            <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div> Моя імперія</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#e94560"></div> Чужа імперія</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#c8a800"></div> На модерації</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#ffffff"></div> Вибрано</div>
-        </div>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-dot" style="background:#a7d99a"></div> Моя імперія</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#d88076"></div> Чужа імперія</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#d1b65e"></div> На модерації</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#ffffff"></div> Вибрано</div>
+            </div>
+        </section>
+
+        <aside class="map-sidebar" aria-label="Інформація про імперію та вибір чанків">
+            <div class="empire-summary">
+                <p class="panel-eyebrow" id="empireId">ІМПЕРІЯ</p>
+                <div class="empire-heading">
+                    <div class="empire-avatar" id="empireAvatar" aria-hidden="true">⚑</div>
+                    <div>
+                        <h1 id="empireName">Завантаження...</h1>
+                        <p>Імператор <span id="playerName">—</span></p>
+                    </div>
+                </div>
+                <div class="empire-count">
+                    <strong id="empireChunkCount">—</strong>
+                    <span>активних чанків</span>
+                </div>
+            </div>
+
+            <div class="selection-summary">
+                <div class="selection-heading">
+                    <span class="selection-mark" aria-hidden="true"></span>
+                    <div>
+                        <p>Вибрані чанки</p>
+                        <strong id="selectedInfo">Вибрано: 0 чанків</strong>
+                    </div>
+                </div>
+                <div class="selection-actions">
+                    <button class="btn-submit" id="submitBtn" type="button" style="display:none">Подати заявку</button>
+                    <button class="btn-surrender" id="surrenderBtn" type="button" style="display:none">Віддати території</button>
+                </div>
+                <p class="selection-hint">Вибери вільні території для заявки або свої чанки для відмови від них.</p>
+            </div>
+            <div id="mapToast" class="map-toast" role="status" aria-live="polite"></div>
+        </aside>
     </main>
 
     <div id="tooltip" class="tooltip"></div>
@@ -188,9 +221,10 @@
         const WORLD_MAX = 312;
         const WORLD_SIZE = WORLD_MAX - WORLD_MIN;
 
-        let CHUNK_SIZE = 2;
+        let CHUNK_SIZE = 28;
         let offsetX = 0;
         let offsetY = 0;
+        let isPointerDown = false;
         let isDragging = false;
         let dragStart = { x: 0, y: 0 };
 
@@ -214,8 +248,8 @@
         };
 
         const EMPIRE_COLORS = [
-            '#e94560', '#4560e9', '#e96045',
-            '#9045e9', '#e9c045', '#45e9c0', '#e945c0'
+            '#d88076', '#7aa6d6', '#d2bd70',
+            '#ad8ad1', '#67baa9', '#c77eae', '#91aa75'
         ];
 
         function resizeCanvas() {
@@ -230,6 +264,62 @@
 
         resizeCanvas();
         centerMap();
+        draw();
+
+        function updateEmpireSummary() {
+            const empire = empires[myEmpireId];
+            document.getElementById('empireId').textContent = myEmpireId ? `ІМПЕРІЯ #${myEmpireId}` : 'ІМПЕРІЯ';
+            document.getElementById('empireName').textContent = empire?.name || 'Імперію не створено';
+            document.getElementById('empireAvatar').textContent = empire?.name?.trim().charAt(0).toUpperCase() || '⚑';
+            document.getElementById('playerName').textContent = sessionStorage.getItem('playerName') || 'Імператор';
+        }
+
+        function updateEmpireChunkCount() {
+            const chunkCount = Object.values(chunks).filter(chunk =>
+                chunk.empireId === myEmpireId && (
+                    chunk.status === 'active' ||
+                    (chunk.status === 'pending' && chunk.requestType === 'surrender')
+                )
+            ).length;
+            document.getElementById('empireChunkCount').textContent = chunkCount;
+        }
+
+        function getSelectionAction() {
+            if (selected.size === 0) return null;
+
+            const actions = new Set();
+            for (const key of selected) {
+                const chunk = chunks[key];
+                if (!chunk || chunk.status === 'neutral') {
+                    actions.add('claim');
+                } else if (chunk.status === 'active' && chunk.empireId === myEmpireId) {
+                    actions.add('surrender');
+                } else {
+                    return null;
+                }
+            }
+
+            return actions.size === 1 ? actions.values().next().value : null;
+        }
+
+        function updateSelectionSummary() {
+            document.getElementById('selectedInfo').textContent = `Вибрано: ${selected.size} чанків`;
+            const action = getSelectionAction();
+            document.getElementById('submitBtn').style.display = action === 'claim' ? 'block' : 'none';
+            document.getElementById('surrenderBtn').style.display = action === 'surrender' ? 'block' : 'none';
+        }
+
+        function showMapToast(message, isError = false) {
+            const toast = document.getElementById('mapToast');
+            toast.textContent = message;
+            toast.style.color = isError ? '#f08b8b' : '';
+            toast.style.borderColor = isError ? 'rgba(237, 119, 119, 0.35)' : '';
+            toast.style.display = 'block';
+            clearTimeout(showMapToast.timeout);
+            showMapToast.timeout = setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3500);
+        }
 
         async function loadData() {
             const empiresSnap = await get(ref(db, 'mvdef/empires'));
@@ -239,11 +329,12 @@
                 const isMine = e.ownerUuid === uuid;
                 empires[child.key] = {
                     name: e.name,
-                    color: isMine ? '#4ade80' : EMPIRE_COLORS[colorIndex % EMPIRE_COLORS.length]
+                    color: isMine ? '#a7d99a' : EMPIRE_COLORS[colorIndex % EMPIRE_COLORS.length]
                 };
                 if (!isMine) colorIndex++;
                 if (isMine) myEmpireId = child.key;
             });
+            updateEmpireSummary();
 
             const biomesSnap = await get(ref(db, 'mvdef/map'));
             biomesSnap.forEach(child => {
@@ -253,6 +344,8 @@
             onValue(ref(db, 'mvdef/chunks'), snapshot => {
                 Object.keys(chunks).forEach(k => delete chunks[k]);
                 snapshot.forEach(child => { chunks[child.key] = child.val(); });
+                updateEmpireChunkCount();
+                updateSelectionSummary();
                 draw();
             });
         }
@@ -273,7 +366,7 @@
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#0a0e17';
+            ctx.fillStyle = '#101713';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             for (let cx = WORLD_MIN; cx < WORLD_MAX; cx++) {
@@ -288,19 +381,19 @@
                     const isSelected = selected.has(key);
 
                     if (chunk && chunk.status === 'active') {
-                        ctx.fillStyle = empires[chunk.empireId]?.color || '#555';
+                        ctx.fillStyle = empires[chunk.empireId]?.color || '#627069';
                     } else if (chunk && chunk.status === 'pending') {
-                        ctx.fillStyle = '#c8a800';
+                        ctx.fillStyle = '#d1b65e';
                     } else {
                         ctx.fillStyle = isSelected ? '#ffffff' : biomeColor;
                     }
 
-                    ctx.fillRect(pos.x, pos.y, CHUNK_SIZE - 0.5, CHUNK_SIZE - 0.5);
+                    ctx.fillRect(pos.x, pos.y, CHUNK_SIZE - 1, CHUNK_SIZE - 1);
 
                     if (isSelected) {
-                        ctx.strokeStyle = '#4ade80';
+                        ctx.strokeStyle = '#a7d99a';
                         ctx.lineWidth = 0.5;
-                        ctx.strokeRect(pos.x, pos.y, CHUNK_SIZE - 0.5, CHUNK_SIZE - 0.5);
+                        ctx.strokeRect(pos.x, pos.y, CHUNK_SIZE - 1, CHUNK_SIZE - 1);
                     }
                 }
             }
@@ -309,7 +402,7 @@
         canvas.addEventListener('wheel', e => {
             e.preventDefault();
             const delta = e.deltaY > 0 ? -1 : 1;
-            const newSize = Math.max(1, Math.min(16, CHUNK_SIZE + delta));
+            const newSize = Math.max(4, Math.min(48, CHUNK_SIZE + delta));
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
@@ -319,21 +412,25 @@
             draw();
         });
 
-        canvas.addEventListener('mousedown', e => {
+        canvas.addEventListener('pointerdown', e => {
+            isPointerDown = true;
             isDragging = false;
             dragStart = { x: e.clientX - offsetX, y: e.clientY - offsetY };
             canvas.style.cursor = 'grabbing';
+            canvas.setPointerCapture(e.pointerId);
         });
 
-        canvas.addEventListener('mousemove', e => {
-            const newOffX = e.clientX - dragStart.x;
-            const newOffY = e.clientY - dragStart.y;
+        canvas.addEventListener('pointermove', e => {
+            if (isPointerDown) {
+                const newOffX = e.clientX - dragStart.x;
+                const newOffY = e.clientY - dragStart.y;
 
-            if (Math.abs(newOffX - offsetX) > 3 || Math.abs(newOffY - offsetY) > 3) {
-                isDragging = true;
-                offsetX = newOffX;
-                offsetY = newOffY;
-                draw();
+                if (Math.abs(newOffX - offsetX) > 3 || Math.abs(newOffY - offsetY) > 3) {
+                    isDragging = true;
+                    offsetX = newOffX;
+                    offsetY = newOffY;
+                    draw();
+                }
             }
 
             const rect = canvas.getBoundingClientRect();
@@ -353,8 +450,9 @@
             }
         });
 
-        canvas.addEventListener('mouseup', e => {
+        canvas.addEventListener('pointerup', e => {
             canvas.style.cursor = 'crosshair';
+            isPointerDown = false;
             if (isDragging) return;
 
             const rect = canvas.getBoundingClientRect();
@@ -362,32 +460,69 @@
             const key = `world_${cx}_${cz}`;
             const chunk = chunks[key];
 
-            if (!chunk || chunk.status === 'neutral') {
+            const action = !chunk || chunk.status === 'neutral'
+                ? 'claim'
+                : chunk.status === 'active' && chunk.empireId === myEmpireId
+                    ? 'surrender'
+                    : null;
+            if (action && (!selected.size || getSelectionAction() === action)) {
                 if (selected.has(key)) selected.delete(key);
                 else selected.add(key);
-                document.getElementById('selectedInfo').textContent = `Вибрано: ${selected.size} чанків`;
-                document.getElementById('submitBtn').style.display = selected.size > 0 ? 'inline-block' : 'none';
+                updateSelectionSummary();
                 draw();
             }
         });
 
-        document.getElementById('submitBtn').addEventListener('click', async () => {
-            if (!myEmpireId) { alert('У вас немає імперії.'); return; }
-            if (selected.size === 0) return;
+        canvas.addEventListener('pointercancel', () => {
+            isPointerDown = false;
+            isDragging = false;
+            canvas.style.cursor = 'crosshair';
+        });
+
+        async function submitTerritoryRequest(requestType) {
+            if (!myEmpireId) {
+                showMapToast('У вас немає імперії.', true);
+                return;
+            }
+            if (selected.size === 0 || getSelectionAction() !== requestType) return;
 
             const updates = {};
             selected.forEach(key => {
-                updates[`mvdef/chunks/${key}`] = { empireId: myEmpireId, status: 'pending' };
+                if (requestType === 'surrender') {
+                    updates[`mvdef/chunks/${key}/status`] = 'pending';
+                    updates[`mvdef/chunks/${key}/requestType`] = requestType;
+                } else {
+                    updates[`mvdef/chunks/${key}`] = {
+                        empireId: myEmpireId,
+                        status: 'pending',
+                        requestType
+                    };
+                }
             });
 
-            await update(ref(db), updates);
+            try {
+                await update(ref(db), updates);
+            } catch (error) {
+                console.error('Не вдалося подати заявку на території:', error);
+                const message = error instanceof Error ? error.message : 'Помилка бази даних.';
+                showMapToast(`Не вдалося подати заявку: ${message}`, true);
+                return;
+            }
+            const submittedCount = selected.size;
             selected.clear();
-            document.getElementById('selectedInfo').textContent = 'Вибрано: 0 чанків';
-            document.getElementById('submitBtn').style.display = 'none';
-            alert('Заявку подано! Очікуйте підтвердження модератора.');
-        });
+            updateSelectionSummary();
+            showMapToast(requestType === 'surrender'
+                ? `Заявку на відмову від ${submittedCount} чанків подано модератору.`
+                : `Заявку на ${submittedCount} чанків подано модератору.`);
+        }
 
-        window.addEventListener('resize', () => { resizeCanvas(); draw(); });
+        document.getElementById('submitBtn').addEventListener('click', () => submitTerritoryRequest('claim'));
+        document.getElementById('surrenderBtn').addEventListener('click', () => submitTerritoryRequest('surrender'));
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            draw();
+        });
 
         loadData();
     </script>

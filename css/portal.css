@@ -68,10 +68,23 @@ body {
     color: var(--green);
 }
 
-.navbar nav a:last-child {
+.navbar nav a:last-child,
+.navbar nav a#logoutBtn {
     padding: 9px 14px;
     border: 1px solid var(--line);
     color: var(--text);
+}
+
+.navbar nav .system-mode-link {
+    padding: 9px 14px;
+    border: 1px solid rgba(167, 217, 154, 0.35);
+    background: rgba(129, 200, 120, 0.1);
+    color: var(--green);
+}
+
+.navbar nav .system-mode-link:hover {
+    background: rgba(129, 200, 120, 0.18);
+    color: #c4eabb;
 }
 
 .navbar .badge {
@@ -203,6 +216,7 @@ body:has(#mapCanvas) .navbar {
     padding: 9px clamp(18px, 4.5vw, 60px);
     gap: 14px 24px;
     flex-wrap: wrap;
+    justify-content: space-between;
     background: rgba(13, 19, 16, 0.97);
     border-color: var(--line);
 }
@@ -223,10 +237,181 @@ body:has(#mapCanvas) .navbar {
     font-weight: 700;
 }
 
+.map-workspace {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    background: #101713;
+}
+
 #mapContainer {
     flex: 1 1 auto;
     min-height: 0;
+    min-width: 0;
     background: #101713;
+}
+
+#mapCanvas {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+
+.map-sidebar {
+    display: flex;
+    flex: 0 0 320px;
+    flex-direction: column;
+    min-height: 0;
+    padding: 24px 22px 18px;
+    background: linear-gradient(155deg, #121b16, #0d1310);
+    border-left: 1px solid var(--line);
+}
+
+.panel-eyebrow {
+    margin-bottom: 14px;
+    color: var(--muted);
+    font-family: Consolas, "Segoe UI", sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.empire-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.empire-avatar {
+    display: grid;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    border: 1px solid rgba(167, 217, 154, 0.38);
+    border-radius: 4px;
+    background: rgba(129, 200, 120, 0.15);
+    color: var(--green);
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.empire-heading h1 {
+    overflow-wrap: anywhere;
+    color: var(--text);
+    font-size: 1.2rem;
+    line-height: 1.2;
+}
+
+.empire-heading p,
+.selection-heading p {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.empire-heading p span {
+    color: var(--text);
+}
+
+.empire-count {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    margin-top: 25px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--line);
+}
+
+.empire-count strong {
+    color: var(--text);
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.empire-count span {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.selection-summary {
+    margin-top: auto;
+    padding: 18px 0 0;
+}
+
+.selection-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.selection-heading p {
+    margin: 0 0 3px;
+}
+
+.selection-heading strong {
+    color: var(--text);
+    font-size: 0.88rem;
+}
+
+.selection-mark {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 10px rgba(167, 217, 154, 0.55);
+}
+
+.selection-actions {
+    display: grid;
+    gap: 9px;
+}
+
+.selection-actions button {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    transition: background 0.18s, border-color 0.18s;
+}
+
+.selection-actions .btn-submit {
+    color: #111811;
+}
+
+.btn-surrender {
+    border-color: rgba(237, 119, 119, 0.34) !important;
+    background: rgba(183, 69, 69, 0.14);
+    color: #f08b8b;
+}
+
+.btn-surrender:hover {
+    border-color: rgba(237, 119, 119, 0.55) !important;
+    background: rgba(183, 69, 69, 0.24);
+}
+
+.selection-hint {
+    margin-top: 13px;
+    color: var(--muted);
+    font-size: 0.73rem;
+    line-height: 1.5;
+}
+
+.map-toast {
+    display: none;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid rgba(167, 217, 154, 0.28);
+    border-radius: 4px;
+    background: rgba(129, 200, 120, 0.09);
+    color: var(--green);
+    font-size: 0.78rem;
+    line-height: 1.4;
 }
 
 .legend {
@@ -282,6 +467,12 @@ body:has(#mapCanvas) .navbar {
 .request-empire {
     color: var(--text);
     overflow-wrap: anywhere;
+}
+
+.request-type {
+    margin-top: 8px;
+    color: var(--green);
+    font-size: 0.76rem;
 }
 
 .request-chunks {
@@ -343,7 +534,9 @@ body:has(#mapCanvas) .navbar {
         font-size: 0.78rem;
     }
 
-    .navbar nav a:last-child {
+    .navbar nav a:last-child,
+    .navbar nav a#logoutBtn,
+    .navbar nav .system-mode-link {
         padding: 7px 9px;
     }
 
@@ -383,6 +576,30 @@ body:has(#mapCanvas) .navbar {
         padding: 10px 12px;
         font-size: 0.73rem;
     }
+
+    .map-workspace {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    #mapContainer {
+        flex: 1 0 55vh;
+        min-height: 320px;
+    }
+
+    .map-sidebar {
+        flex: 0 0 auto;
+        gap: 20px;
+        padding: 20px 18px;
+        border-top: 1px solid var(--line);
+        border-left: 0;
+    }
+
+    .selection-summary {
+        margin-top: 0;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+    }
 }
 
 @media (max-width: 420px) {
@@ -401,6 +618,18 @@ body:has(#mapCanvas) .navbar {
         gap: 8px;
     }
 
+    body:has(#mapCanvas) {
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: auto;
+    }
+
+    body:has(#mapCanvas) .map-workspace {
+        flex: 1 0 auto;
+        min-height: 0;
+    }
+
     .map-toolbar {
         padding: 9px 14px;
         gap: 8px 14px;
@@ -408,5 +637,9 @@ body:has(#mapCanvas) .navbar {
 
     .map-toolbar span {
         font-size: 0.77rem;
+    }
+
+    .map-sidebar {
+        padding: 18px 16px;
     }
 }

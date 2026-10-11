@@ -244,6 +244,7 @@
         </div>
         <nav>
             <a href="#" id="logoutBtn">Вийти</a>
+            <a href="cabinet.html" class="system-mode-link">В систему</a>
         </nav>
     </header>
 
@@ -284,7 +285,7 @@
 
         const provider = new GoogleAuthProvider();
 
-        function showToast(msg, color = '#4ade80') {
+        function showToast(msg, color = '#a7d99a') {
             const toast = document.getElementById('toast');
             toast.textContent = msg;
             toast.style.color = color;
@@ -335,8 +336,16 @@
             chunksSnap.forEach(c => {
                 const chunk = c.val();
                 if (chunk.status !== 'pending') return;
-                if (!pendingByEmpire[chunk.empireId]) pendingByEmpire[chunk.empireId] = [];
-                pendingByEmpire[chunk.empireId].push(c.key);
+                const requestType = chunk.requestType === 'surrender' ? 'surrender' : 'claim';
+                const groupKey = `${chunk.empireId}:${requestType}`;
+                if (!pendingByEmpire[groupKey]) {
+                    pendingByEmpire[groupKey] = {
+                        empireId: chunk.empireId,
+                        requestType,
+                        keys: []
+                    };
+                }
+                pendingByEmpire[groupKey].keys.push(c.key);
             });
 
             const list = document.getElementById('pendingList');
@@ -346,7 +355,7 @@
                 return;
             }
 
-            list.innerHTML = Object.entries(pendingByEmpire).map(([empireId, keys]) => {
+            list.innerHTML = Object.values(pendingByEmpire).map(({ empireId, requestType, keys }) => {
                 const e = empires[empireId];
                 if (!e) return '';
                 return `
@@ -354,46 +363,72 @@
                         <div class="request-info">
                             <div class="request-empire">⚑ ${e.name}</div>
                             <div class="request-meta">Гравець: ${e.ownerName}</div>
+                            <div class="request-type">${requestType === 'surrender' ? 'Відмова від території' : 'Розширення імперії'}</div>
                         </div>
                         <div class="request-chunks">
                             ${keys.length}
                             <span>чанків</span>
                         </div>
                         <div class="request-actions">
-                            <button class="btn-approve" onclick="approve('${empireId}','${e.ownerUuid}',${JSON.stringify(keys)})">✓ Підтвердити</button>
-                            <button class="btn-reject" onclick="reject('${empireId}','${e.ownerUuid}',${JSON.stringify(keys)})">✗ Відхилити</button>
+                            <button class="btn-approve" onclick="approve('${empireId}','${e.ownerUuid}',${JSON.stringify(keys)},'${requestType}')">✓ Підтвердити</button>
+                            <button class="btn-reject" onclick="reject('${empireId}','${e.ownerUuid}',${JSON.stringify(keys)},'${requestType}')">✗ Відхилити</button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        window.approve = async (empireId, ownerUuid, keys) => {
+        window.approve = async (empireId, ownerUuid, keys, requestType = 'claim') => {
             const updates = {};
-            keys.forEach(k => { updates[`mvdef/chunks/${k}/status`] = 'active'; });
+            keys.forEach(k => {
+                updates[`mvdef/chunks/${k}/status`] = requestType === 'surrender' ? 'neutral' : 'active';
+                updates[`mvdef/chunks/${k}/requestType`] = null;
+                if (requestType === 'surrender') {
+                    updates[`mvdef/chunks/${k}/empireId`] = null;
+                }
+            });
             updates[`mvdef/notifications/${ownerUuid}/${Date.now()}`] = {
-                message: `✅ Заявку підтверджено! Імперія розширена на ${keys.length} чанків.`,
+                message: requestType === 'surrender'
+                    ? `✅ Відмову від території підтверджено. Звільнено ${keys.length} чанків.`
+                    : `✅ Заявку підтверджено! Імперія розширена на ${keys.length} чанків.`,
                 read: false,
                 createdAt: Date.now()
             };
-            await update(ref(db), updates);
-            showToast('✓ Підтверджено!');
+            try {
+                await update(ref(db), updates);
+            } catch (error) {
+                console.error('Не вдалося підтвердити заявку:', error);
+                showToast(`Помилка підтвердження: ${error.message}`, '#ed7777');
+                return;
+            }
+            showToast(requestType === 'surrender' ? '✓ Території звільнено!' : '✓ Підтверджено!');
             loadPending();
         };
 
-        window.reject = async (empireId, ownerUuid, keys) => {
+        window.reject = async (empireId, ownerUuid, keys, requestType = 'claim') => {
             const updates = {};
             keys.forEach(k => {
-                updates[`mvdef/chunks/${k}/status`] = 'neutral';
-                updates[`mvdef/chunks/${k}/empireId`] = null;
+                updates[`mvdef/chunks/${k}/status`] = requestType === 'surrender' ? 'active' : 'neutral';
+                updates[`mvdef/chunks/${k}/requestType`] = null;
+                if (requestType !== 'surrender') {
+                    updates[`mvdef/chunks/${k}/empireId`] = null;
+                }
             });
             updates[`mvdef/notifications/${ownerUuid}/${Date.now()}`] = {
-                message: `❌ Заявку відхилено. Зверніться до адміністратора.`,
+                message: requestType === 'surrender'
+                    ? `❌ Відмову від території не підтверджено. Чанки залишилися у вашій імперії.`
+                    : `❌ Заявку відхилено. Зверніться до адміністратора.`,
                 read: false,
                 createdAt: Date.now()
             };
-            await update(ref(db), updates);
-            showToast('Відхилено.', '#e94560');
+            try {
+                await update(ref(db), updates);
+            } catch (error) {
+                console.error('Не вдалося відхилити заявку:', error);
+                showToast(`Помилка відхилення: ${error.message}`, '#ed7777');
+                return;
+            }
+            showToast(requestType === 'surrender' ? 'Відхилено — території залишилися у власника.' : 'Відхилено.', '#ed7777');
             loadPending();
         };
     </script>
