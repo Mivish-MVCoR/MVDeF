@@ -520,6 +520,45 @@ body:has(#mapCanvas) .navbar {
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
 }
 
+.request-actions button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
+.request-minimap {
+    position: fixed;
+    z-index: 150;
+    display: none;
+    max-width: min(340px, calc(100vw - 24px));
+    padding: 11px;
+    border: 1px solid rgba(167, 217, 154, 0.32);
+    border-radius: 7px;
+    background: rgba(9, 14, 12, 0.97);
+    box-shadow: 0 14px 44px rgba(0, 0, 0, 0.48);
+    pointer-events: none;
+}
+
+.request-minimap-title {
+    margin-bottom: 8px;
+    color: var(--text);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.request-minimap canvas {
+    display: block;
+    max-width: 300px;
+    max-height: 220px;
+    border: 1px solid var(--line);
+    image-rendering: pixelated;
+}
+
+.request-minimap-caption {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 0.67rem;
+}
+
 @media (max-width: 680px) {
     .navbar {
         min-height: 64px;
@@ -568,6 +607,10 @@ body:has(#mapCanvas) .navbar {
 
     .request-actions button {
         flex: 1 1 140px;
+    }
+
+    .request-minimap {
+        max-width: calc(100vw - 24px);
     }
 
     .legend {

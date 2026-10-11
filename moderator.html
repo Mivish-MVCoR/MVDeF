@@ -243,8 +243,8 @@
             <div class="badge">MODERATOR</div>
         </div>
         <nav>
-            <a href="#" id="logoutBtn">Вийти</a>
             <a href="cabinet.html" class="system-mode-link">В систему</a>
+            <a href="#" id="logoutBtn">Вихід</a>
         </nav>
     </header>
 
@@ -277,6 +277,11 @@
     </main>
 
     <div class="toast" id="toast"></div>
+    <div class="request-minimap" id="requestMinimap" aria-hidden="true">
+        <div class="request-minimap-title" id="requestMinimapTitle"></div>
+        <canvas id="requestMinimapCanvas"></canvas>
+        <div class="request-minimap-caption">Вибрані чанки та сусідня територія</div>
+    </div>
 
     <script type="module">
         import { db, auth } from './js/firebase.js';
@@ -284,6 +289,17 @@
         import { ref, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const provider = new GoogleAuthProvider();
+        const pendingRequestsById = new Map();
+        const requestMinimap = document.getElementById('requestMinimap');
+        const requestMinimapCanvas = document.getElementById('requestMinimapCanvas');
+        const requestMinimapTitle = document.getElementById('requestMinimapTitle');
+        let hoveredRequestCard = null;
+        let shiftPressed = false;
+        let pointerX = 0;
+        let pointerY = 0;
+        let minimapChunks = {};
+        let minimapEmpires = {};
+        let minimapBiomes = {};
 
         function showToast(msg, color = '#a7d99a') {
             const toast = document.getElementById('toast');
@@ -300,6 +316,70 @@
         });
 
         document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Shift') return;
+            shiftPressed = true;
+            updateRequestMinimap();
+        });
+
+        document.addEventListener('keyup', event => {
+            if (event.key !== 'Shift') return;
+            shiftPressed = false;
+            hideRequestMinimap();
+        });
+
+        window.addEventListener('blur', () => {
+            shiftPressed = false;
+            hideRequestMinimap();
+        });
+
+        document.addEventListener('pointermove', event => {
+            pointerX = event.clientX;
+            pointerY = event.clientY;
+            if (requestMinimap.style.display === 'block') {
+                positionRequestMinimap(pointerX, pointerY);
+            }
+        });
+
+        document.getElementById('pendingList').addEventListener('pointerover', event => {
+            const card = event.target.closest('.request-card');
+            if (!card || card.contains(event.relatedTarget)) return;
+            pointerX = event.clientX;
+            pointerY = event.clientY;
+            hoveredRequestCard = card;
+            updateRequestMinimap();
+        });
+
+        document.getElementById('pendingList').addEventListener('pointerout', event => {
+            const card = event.target.closest('.request-card');
+            if (!card || card.contains(event.relatedTarget)) return;
+            if (hoveredRequestCard === card && !shiftPressed) {
+                hoveredRequestCard = null;
+                hideRequestMinimap();
+            }
+        });
+
+        document.getElementById('pendingList').addEventListener('click', async event => {
+            const button = event.target.closest('button[data-action][data-request-id]');
+            if (!button) return;
+
+            const request = pendingRequestsById.get(button.dataset.requestId);
+            if (!request || button.disabled) return;
+
+            button.disabled = true;
+            const requestActionButtons = button.closest('.request-actions').querySelectorAll('button');
+            requestActionButtons.forEach(actionButton => { actionButton.disabled = true; });
+            if (button.dataset.action === 'approve') {
+                if (!await approveRequest(request)) {
+                    requestActionButtons.forEach(actionButton => { actionButton.disabled = false; });
+                }
+            } else if (button.dataset.action === 'reject') {
+                if (!await rejectRequest(request)) {
+                    requestActionButtons.forEach(actionButton => { actionButton.disabled = false; });
+                }
+            }
+        });
 
         onAuthStateChanged(auth, async user => {
             if (!user) {
@@ -329,8 +409,21 @@
                 get(ref(db, 'mvdef/empires'))
             ]);
 
+            minimapChunks = {};
+            chunksSnap.forEach(c => { minimapChunks[c.key] = c.val(); });
             const empires = {};
-            empiresSnap.forEach(c => { empires[c.key] = c.val(); });
+            let empireColorIndex = 0;
+            const minimapPalette = ['#d88076', '#7aa6d6', '#d2bd70', '#ad8ad1', '#67baa9', '#c77eae', '#91aa75'];
+            empiresSnap.forEach(c => {
+                empires[c.key] = c.val();
+                minimapEmpires[c.key] = minimapPalette[empireColorIndex % minimapPalette.length];
+                empireColorIndex++;
+            });
+            minimapBiomes = {};
+            const biomesSnap = await get(ref(db, 'mvdef/map'));
+            biomesSnap.forEach(c => {
+                minimapBiomes[c.key] = c.val().color || '#24312a';
+            });
 
             const pendingByEmpire = {};
             chunksSnap.forEach(c => {
@@ -349,17 +442,28 @@
             });
 
             const list = document.getElementById('pendingList');
+            pendingRequestsById.clear();
+            let requestIndex = 0;
 
             if (Object.keys(pendingByEmpire).length === 0) {
                 list.innerHTML = '<div class="empty">Немає заявок на розгляді.</div>';
+                hideRequestMinimap();
                 return;
             }
 
             list.innerHTML = Object.values(pendingByEmpire).map(({ empireId, requestType, keys }) => {
                 const e = empires[empireId];
                 if (!e) return '';
+                const requestId = `request-${requestIndex++}`;
+                pendingRequestsById.set(requestId, {
+                    empireId,
+                    ownerUuid: e.ownerUuid,
+                    keys,
+                    requestType,
+                    empireName: e.name
+                });
                 return `
-                    <div class="request-card">
+                    <div class="request-card" data-request-id="${requestId}">
                         <div class="request-info">
                             <div class="request-empire">⚑ ${e.name}</div>
                             <div class="request-meta">Гравець: ${e.ownerName}</div>
@@ -370,15 +474,110 @@
                             <span>чанків</span>
                         </div>
                         <div class="request-actions">
-                            <button class="btn-approve" onclick="approve('${empireId}','${e.ownerUuid}',${JSON.stringify(keys)},'${requestType}')">✓ Підтвердити</button>
-                            <button class="btn-reject" onclick="reject('${empireId}','${e.ownerUuid}',${JSON.stringify(keys)},'${requestType}')">✗ Відхилити</button>
+                            <button class="btn-approve" type="button" data-action="approve" data-request-id="${requestId}">✓ Підтвердити</button>
+                            <button class="btn-reject" type="button" data-action="reject" data-request-id="${requestId}">✗ Відхилити</button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        window.approve = async (empireId, ownerUuid, keys, requestType = 'claim') => {
+        function updateRequestMinimap() {
+            if (!shiftPressed || !hoveredRequestCard) {
+                hideRequestMinimap();
+                return;
+            }
+
+            const requestId = hoveredRequestCard.dataset.requestId;
+            const request = pendingRequestsById.get(requestId);
+            if (!request) {
+                hideRequestMinimap();
+                return;
+            }
+
+            drawRequestMinimap(request);
+            requestMinimap.style.display = 'block';
+            requestMinimap.setAttribute('aria-hidden', 'false');
+            positionRequestMinimap(pointerX, pointerY);
+        }
+
+        function drawRequestMinimap(request) {
+            const coordinates = request.keys.map(key => {
+                const match = /^world_(-?\d+)_(-?\d+)$/.exec(key);
+                return match ? { x: Number(match[1]), z: Number(match[2]) } : null;
+            }).filter(Boolean);
+            if (!coordinates.length) {
+                requestMinimapTitle.textContent = `${request.empireName} — координати недоступні`;
+                requestMinimapCanvas.width = 0;
+                requestMinimapCanvas.height = 0;
+                return;
+            }
+
+            const minX = Math.min(...coordinates.map(point => point.x)) - 1;
+            const maxX = Math.max(...coordinates.map(point => point.x)) + 1;
+            const minZ = Math.min(...coordinates.map(point => point.z)) - 1;
+            const maxZ = Math.max(...coordinates.map(point => point.z)) + 1;
+            const columns = maxX - minX + 1;
+            const rows = maxZ - minZ + 1;
+            const cellSize = Math.max(1, Math.min(22, 300 / columns, 220 / rows));
+
+            requestMinimapTitle.textContent = `${request.empireName} · ${coordinates.length} чанків`;
+            requestMinimapCanvas.width = Math.ceil(columns * cellSize);
+            requestMinimapCanvas.height = Math.ceil(rows * cellSize);
+            const context = requestMinimapCanvas.getContext('2d');
+            context.fillStyle = '#101713';
+            context.fillRect(0, 0, requestMinimapCanvas.width, requestMinimapCanvas.height);
+            context.strokeStyle = 'rgba(220, 233, 223, 0.16)';
+            context.lineWidth = 1;
+
+            for (let x = minX; x <= maxX; x++) {
+                for (let z = minZ; z <= maxZ; z++) {
+                    const key = `world_${x}_${z}`;
+                    const chunk = minimapChunks[key];
+                    const requested = request.keys.includes(key);
+                    let color = minimapBiomes[key] || '#24312a';
+                    if (chunk?.status === 'active') {
+                        color = minimapEmpires[chunk.empireId] || '#627069';
+                    } else if (chunk?.status === 'pending') {
+                        color = '#d1b65e';
+                    }
+
+                    const cellX = (x - minX) * cellSize;
+                    const cellY = (z - minZ) * cellSize;
+                    context.fillStyle = color;
+                    context.fillRect(cellX, cellY, cellSize, cellSize);
+                    context.strokeRect(cellX + 0.5, cellY + 0.5, cellSize - 1, cellSize - 1);
+                    if (requested) {
+                        context.strokeStyle = '#ffffff';
+                        context.lineWidth = 2;
+                        context.strokeRect(cellX + 1, cellY + 1, cellSize - 2, cellSize - 2);
+                        context.strokeStyle = 'rgba(220, 233, 223, 0.16)';
+                        context.lineWidth = 1;
+                    }
+                }
+            }
+        }
+
+        function positionRequestMinimap(x, y) {
+            const margin = 12;
+            const previewRect = requestMinimap.getBoundingClientRect();
+            const left = x + previewRect.width + margin <= window.innerWidth
+                ? x + margin
+                : Math.max(margin, x - previewRect.width - margin);
+            const top = Math.min(
+                Math.max(margin, y - previewRect.height / 2),
+                window.innerHeight - previewRect.height - margin
+            );
+            requestMinimap.style.left = `${left}px`;
+            requestMinimap.style.top = `${top}px`;
+        }
+
+        function hideRequestMinimap() {
+            requestMinimap.style.display = 'none';
+            requestMinimap.setAttribute('aria-hidden', 'true');
+        }
+
+        async function approveRequest({ empireId, ownerUuid, keys, requestType }) {
             const updates = {};
             keys.forEach(k => {
                 updates[`mvdef/chunks/${k}/status`] = requestType === 'surrender' ? 'neutral' : 'active';
@@ -398,14 +597,20 @@
                 await update(ref(db), updates);
             } catch (error) {
                 console.error('Не вдалося підтвердити заявку:', error);
-                showToast(`Помилка підтвердження: ${error.message}`, '#ed7777');
-                return;
+                showToast(`Помилка підтвердження: ${error instanceof Error ? error.message : 'невідома помилка'}`, '#ed7777');
+                return false;
             }
             showToast(requestType === 'surrender' ? '✓ Території звільнено!' : '✓ Підтверджено!');
-            loadPending();
-        };
+            try {
+                await loadPending();
+            } catch (error) {
+                console.error('Не вдалося оновити список заявок:', error);
+                showToast(`Заявку оброблено, але список не оновився: ${error instanceof Error ? error.message : 'невідома помилка'}`, '#ed7777');
+            }
+            return true;
+        }
 
-        window.reject = async (empireId, ownerUuid, keys, requestType = 'claim') => {
+        async function rejectRequest({ empireId, ownerUuid, keys, requestType }) {
             const updates = {};
             keys.forEach(k => {
                 updates[`mvdef/chunks/${k}/status`] = requestType === 'surrender' ? 'active' : 'neutral';
@@ -425,12 +630,18 @@
                 await update(ref(db), updates);
             } catch (error) {
                 console.error('Не вдалося відхилити заявку:', error);
-                showToast(`Помилка відхилення: ${error.message}`, '#ed7777');
-                return;
+                showToast(`Помилка відхилення: ${error instanceof Error ? error.message : 'невідома помилка'}`, '#ed7777');
+                return false;
             }
             showToast(requestType === 'surrender' ? 'Відхилено — території залишилися у власника.' : 'Відхилено.', '#ed7777');
-            loadPending();
-        };
+            try {
+                await loadPending();
+            } catch (error) {
+                console.error('Не вдалося оновити список заявок:', error);
+                showToast(`Заявку оброблено, але список не оновився: ${error instanceof Error ? error.message : 'невідома помилка'}`, '#ed7777');
+            }
+            return true;
+        }
     </script>
 </body>
 </html>
