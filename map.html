@@ -151,7 +151,7 @@
     <div class="map-toolbar">
         <span id="coordsInfo">Чанк: —</span>
         <div class="map-image-controls">
-            <label class="map-image-button" for="worldMapFile" title="Квадратна PNG-карта зверху для чанків від -312 до 311 по X і Z">Завантажити PNG світу</label>
+            <label class="map-image-button" for="worldMapFile" title="Квадратна PNG-карта зверху, центрована на чанку X:0, Z:0">Завантажити PNG світу</label>
             <input id="worldMapFile" class="visually-hidden" type="file" accept="image/png,.png">
             <label class="map-image-toggle">
                 <input id="worldMapToggle" type="checkbox" checked disabled>
@@ -162,7 +162,12 @@
                 <span>Видимість карти</span>
                 <input id="worldMapOpacity" type="range" min="15" max="100" value="58" disabled>
             </label>
-            <span class="map-image-note">Квадратний вид зверху · чанки X/Z від −312 до 311 · лише в цьому браузері</span>
+            <label class="map-opacity-control" for="worldMapScale">
+                <span>Розмір PNG</span>
+                <input id="worldMapScale" type="range" min="100" max="150" value="110" disabled>
+                <span id="worldMapScaleValue">110%</span>
+            </label>
+            <span class="map-image-note">1360 × 1360 блоків · центр X:0, Z:0 · чанки від −42 до 42 · лише в цьому браузері</span>
         </div>
     </div>
 
@@ -231,22 +236,27 @@
         const tooltip = document.getElementById('tooltip');
         const container = document.getElementById('mapContainer');
 
-        const WORLD_MIN = -312;
-        const WORLD_MAX = 312;
+        const CHUNK_BLOCK_SIZE = 16;
+        const WORLD_BLOCK_SIZE = 1360;
+        const WORLD_CHUNK_SIZE = WORLD_BLOCK_SIZE / CHUNK_BLOCK_SIZE;
+        const WORLD_MIN = -Math.floor(WORLD_CHUNK_SIZE / 2);
+        const WORLD_MAX = WORLD_MIN + WORLD_CHUNK_SIZE;
         const WORLD_SIZE = WORLD_MAX - WORLD_MIN;
         const WORLD_MAP_DATABASE = 'mvdef-world-map';
         const WORLD_MAP_STORE = 'assets';
         const WORLD_MAP_KEY = 'world-overview';
         const MAX_WORLD_MAP_SIZE = 25 * 1024 * 1024;
 
-        let CHUNK_SIZE = 28;
+        let CHUNK_SIZE = 7;
         let offsetX = 0;
         let offsetY = 0;
         let worldMapImage = null;
         let worldMapObjectUrl = null;
         let worldMapOpacity = 0.58;
+        let worldMapScale = 1.1;
         let isPointerDown = false;
         let isDragging = false;
+        let hasNavigated = false;
         let dragStart = { x: 0, y: 0 };
 
         const chunks = {};
@@ -257,6 +267,8 @@
         const worldMapFile = document.getElementById('worldMapFile');
         const worldMapToggle = document.getElementById('worldMapToggle');
         const worldMapOpacityInput = document.getElementById('worldMapOpacity');
+        const worldMapScaleInput = document.getElementById('worldMapScale');
+        const worldMapScaleValue = document.getElementById('worldMapScaleValue');
         const removeWorldMapButton = document.getElementById('removeWorldMap');
 
         const BIOME_COLORS = {
@@ -287,8 +299,13 @@
             offsetY = canvas.height / 2 - (WORLD_SIZE * CHUNK_SIZE) / 2;
         }
 
+        function fitMapToView() {
+            CHUNK_SIZE = Math.max(1, Math.min(48, Math.floor(Math.min(canvas.width, canvas.height) / WORLD_SIZE)));
+            centerMap();
+        }
+
         resizeCanvas();
-        centerMap();
+        fitMapToView();
         draw();
         restoreWorldMap();
 
@@ -383,6 +400,7 @@
             worldMapObjectUrl = objectUrl;
             worldMapToggle.disabled = false;
             worldMapOpacityInput.disabled = false;
+            worldMapScaleInput.disabled = false;
             removeWorldMapButton.disabled = false;
             draw();
         }
@@ -433,6 +451,12 @@
             draw();
         });
 
+        worldMapScaleInput.addEventListener('input', () => {
+            worldMapScale = Number(worldMapScaleInput.value) / 100;
+            worldMapScaleValue.textContent = `${worldMapScaleInput.value}%`;
+            draw();
+        });
+
         worldMapToggle.addEventListener('change', draw);
 
         removeWorldMapButton.addEventListener('click', async () => {
@@ -444,6 +468,10 @@
                 worldMapToggle.checked = true;
                 worldMapToggle.disabled = true;
                 worldMapOpacityInput.disabled = true;
+                worldMapScaleInput.disabled = true;
+                worldMapScaleInput.value = '110';
+                worldMapScaleValue.textContent = '110%';
+                worldMapScale = 1.1;
                 removeWorldMapButton.disabled = true;
                 draw();
                 showMapToast('PNG-карту прибрано з цього браузера.');
@@ -556,14 +584,20 @@
             ctx.fillStyle = '#101713';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            const worldPixelSize = WORLD_SIZE * CHUNK_SIZE;
+            ctx.fillStyle = '#1a2a1a';
+            ctx.fillRect(offsetX, offsetY, worldPixelSize, worldPixelSize);
+
             if (worldMapImage && worldMapToggle.checked) {
+                const imagePixelSize = worldPixelSize * worldMapScale;
+                const imageOffset = (worldPixelSize - imagePixelSize) / 2;
                 ctx.globalAlpha = worldMapOpacity;
                 ctx.drawImage(
                     worldMapImage,
-                    offsetX,
-                    offsetY,
-                    WORLD_SIZE * CHUNK_SIZE,
-                    WORLD_SIZE * CHUNK_SIZE
+                    offsetX + imageOffset,
+                    offsetY + imageOffset,
+                    imagePixelSize,
+                    imagePixelSize
                 );
                 ctx.globalAlpha = 1;
             }
@@ -599,19 +633,24 @@
                         ctx.strokeRect(pos.x, pos.y, CHUNK_SIZE - 1, CHUNK_SIZE - 1);
                     }
                 }
+
+                ctx.strokeStyle = 'rgba(167, 217, 154, 0.45)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(offsetX + 0.5, offsetY + 0.5, worldPixelSize - 1, worldPixelSize - 1);
             }
         }
 
         canvas.addEventListener('wheel', e => {
             e.preventDefault();
             const delta = e.deltaY > 0 ? -1 : 1;
-            const newSize = Math.max(4, Math.min(48, CHUNK_SIZE + delta));
+            const newSize = Math.max(1, Math.min(48, CHUNK_SIZE + delta));
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
             offsetX = mouseX - (mouseX - offsetX) * (newSize / CHUNK_SIZE);
             offsetY = mouseY - (mouseY - offsetY) * (newSize / CHUNK_SIZE);
             CHUNK_SIZE = newSize;
+            hasNavigated = true;
             draw();
         });
 
@@ -630,6 +669,7 @@
 
                 if (Math.abs(newOffX - offsetX) > 3 || Math.abs(newOffY - offsetY) > 3) {
                     isDragging = true;
+                    hasNavigated = true;
                     offsetX = newOffX;
                     offsetY = newOffY;
                     draw();
@@ -638,7 +678,12 @@
 
             const rect = canvas.getBoundingClientRect();
             const { cx, cz } = canvasToChunk(e.clientX - rect.left, e.clientY - rect.top);
-            document.getElementById('coordsInfo').textContent = `Чанк: ${cx}, ${cz}`;
+            const isInsideWorld = cx >= WORLD_MIN && cx < WORLD_MAX && cz >= WORLD_MIN && cz < WORLD_MAX;
+            document.getElementById('coordsInfo').textContent = isInsideWorld ? `Чанк: ${cx}, ${cz}` : 'За межами карти';
+            if (!isInsideWorld) {
+                tooltip.style.display = 'none';
+                return;
+            }
 
             const key = `world_${cx}_${cz}`;
             const chunk = chunks[key];
@@ -660,6 +705,7 @@
 
             const rect = canvas.getBoundingClientRect();
             const { cx, cz } = canvasToChunk(e.clientX - rect.left, e.clientY - rect.top);
+            if (cx < WORLD_MIN || cx >= WORLD_MAX || cz < WORLD_MIN || cz >= WORLD_MAX) return;
             const key = `world_${cx}_${cz}`;
             const chunk = chunks[key];
 
@@ -724,6 +770,7 @@
 
         window.addEventListener('resize', () => {
             resizeCanvas();
+            if (!hasNavigated) fitMapToView();
             draw();
         });
 
