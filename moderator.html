@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Модератор</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <div class="navbar">
+        <h1>⚑ MVDeF — Панель модератора</h1>
+        <nav>
+            <a href="#" id="logoutBtn">Вийти</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="card" id="authCard">
+            <h2>Вхід для модератора</h2>
+            <button class="btn btn-primary" id="googleLoginBtn">Увійти через Google</button>
+            <div id="authStatus" class="status" style="margin-top:16px"></div>
+        </div>
+
+        <div id="moderatorPanel" style="display:none">
+            <div class="card">
+                <h2>Заявки на розширення територій</h2>
+                <div id="pendingList">Завантаження...</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, auth } from './js/firebase.js';
+        import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { ref, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const provider = new GoogleAuthProvider();
+
+        document.getElementById('googleLoginBtn').addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch(err => {
+                document.getElementById('authStatus').textContent = 'Помилка входу: ' + err.message;
+                document.getElementById('authStatus').className = 'status error';
+            });
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        onAuthStateChanged(auth, async user => {
+            if (!user) {
+                document.getElementById('authCard').style.display = 'block';
+                document.getElementById('moderatorPanel').style.display = 'none';
+                return;
+            }
+
+            // Перевіряємо чи є модератором
+            const email = user.email.replace(/\./g, '_');
+            const modSnap = await get(ref(db, `mvdef/moderators/${email}`));
+
+            if (!modSnap.exists()) {
+                document.getElementById('authStatus').textContent = 'У вас немає прав модератора.';
+                document.getElementById('authStatus').className = 'status error';
+                signOut(auth);
+                return;
+            }
+
+            document.getElementById('authCard').style.display = 'none';
+            document.getElementById('moderatorPanel').style.display = 'block';
+            loadPending();
+        });
+
+        async function loadPending() {
+            const chunksSnap = await get(ref(db, 'mvdef/chunks'));
+            const empiresSnap = await get(ref(db, 'mvdef/empires'));
+
+            const empires = {};
+            empiresSnap.forEach(child => {
+                empires[child.key] = child.val();
+            });
+
+            // Групуємо pending чанки по імперії
+            const pendingByEmpire = {};
+            chunksSnap.forEach(child => {
+                const chunk = child.val();
+                if (chunk.status !== 'pending') return;
+                if (!pendingByEmpire[chunk.empireId]) {
+                    pendingByEmpire[chunk.empireId] = [];
+                }
+                pendingByEmpire[chunk.empireId].push(child.key);
+            });
+
+            const list = document.getElementById('pendingList');
+
+            if (Object.keys(pendingByEmpire).length === 0) {
+                list.innerHTML = '<p style="color:#a0a0b0;">Немає заявок.</p>';
+                return;
+            }
+
+            let html = '';
+            for (const [empireId, chunkKeys] of Object.entries(pendingByEmpire)) {
+                const empire = empires[empireId];
+                if (!empire) continue;
+                html += `
+                    <div class="card" style="margin-bottom:16px">
+                        <p><strong>Імперія:</strong> ${empire.name}</p>
+                        <p><strong>Гравець:</strong> ${empire.ownerName}</p>
+                        <p><strong>Чанків у заявці:</strong> ${chunkKeys.length}</p>
+                        <br>
+                        <button class="btn btn-success" onclick="approve('${empireId}', '${empire.ownerUuid}', ${JSON.stringify(chunkKeys)})">✓ Підтвердити</button>
+                        &nbsp;
+                        <button class="btn btn-danger" onclick="reject('${empireId}', '${empire.ownerUuid}', ${JSON.stringify(chunkKeys)})">✗ Відхилити</button>
+                    </div>
+                `;
+            }
+            list.innerHTML = html;
+        }
+
+        window.approve = async (empireId, ownerUuid, chunkKeys) => {
+            const updates = {};
+            chunkKeys.forEach(key => {
+                updates[`mvdef/chunks/${key}/status`] = 'active';
+            });
+
+            const notifId = Date.now();
+            updates[`mvdef/notifications/${ownerUuid}/${notifId}`] = {
+                message: `✅ Ваша заявка підтверджена! Імперія розширена на ${chunkKeys.length} чанків.`,
+                read: false,
+                createdAt: notifId
+            };
+
+            await update(ref(db), updates);
+            alert('Підтверджено!');
+            loadPending();
+        };
+
+        window.reject = async (empireId, ownerUuid, chunkKeys) => {
+            const updates = {};
+            chunkKeys.forEach(key => {
+                updates[`mvdef/chunks/${key}/status`] = 'neutral';
+                updates[`mvdef/chunks/${key}/empireId`] = null;
+            });
+
+            const notifId = Date.now();
+            updates[`mvdef/notifications/${ownerUuid}/${notifId}`] = {
+                message: `❌ Вашу заявку відхилено. Зверніться до адміністратора.`,
+                read: false,
+                createdAt: notifId
+            };
+
+            await update(ref(db), updates);
+            alert('Відхилено!');
+            loadPending();
+        };
+    </script>
+</body>
+</html>

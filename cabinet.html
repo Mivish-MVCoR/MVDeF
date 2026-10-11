@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Кабінет</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0e17;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: rgba(10,14,23,0.95);
+            border-bottom: 1px solid #1a2540;
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .navbar .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #4ade80;
+            letter-spacing: 0.05em;
+        }
+
+        .navbar .logo span {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #4ade80;
+            border-radius: 2px;
+        }
+
+        .navbar nav a {
+            color: #8a9ab5;
+            text-decoration: none;
+            margin-left: 24px;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .navbar nav a:hover { color: #e0e0e0; }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        .greeting {
+            margin-bottom: 32px;
+        }
+
+        .greeting h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #e0e0e0;
+        }
+
+        .greeting p {
+            color: #8a9ab5;
+            margin-top: 4px;
+            font-size: 0.9rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 640px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: #0d1220;
+            border: 1px solid #1a2540;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .card.full { grid-column: 1 / -1; }
+
+        .card-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #4ade80;
+            margin-bottom: 12px;
+        }
+
+        .card h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #e0e0e0;
+            margin-bottom: 4px;
+        }
+
+        .card .sub {
+            color: #8a9ab5;
+            font-size: 0.85rem;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #1a2540;
+        }
+
+        .stat-row:last-child { border-bottom: none; }
+
+        .stat-label { color: #8a9ab5; font-size: 0.85rem; }
+        .stat-value { color: #e0e0e0; font-size: 0.9rem; font-weight: 600; }
+
+        .btn-map {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #4ade80;
+            color: #0a0e17;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            margin-top: 16px;
+            transition: opacity 0.2s;
+        }
+
+        .btn-map:hover { opacity: 0.85; }
+
+        .notif-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #1a2540;
+            font-size: 0.88rem;
+            color: #c0c0d0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .notif-item:last-child { border-bottom: none; }
+
+        .notif-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            margin-top: 5px;
+            flex-shrink: 0;
+        }
+
+        .notif-dot.read { background: #1a2540; }
+
+        .empty {
+            color: #8a9ab5;
+            font-size: 0.85rem;
+            padding: 8px 0;
+        }
+
+        .status-online {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #4ade80;
+            background: rgba(74,222,128,0.1);
+            border: 1px solid rgba(74,222,128,0.2);
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        .status-online::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #4ade80;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo"><span></span> MVDeF</div>
+        <nav>
+            <a href="cabinet.html">Кабінет</a>
+            <a href="map.html">Карта</a>
+            <a href="#" id="logoutBtn">Вийти</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="greeting">
+            <h1 id="greetingName">Завантаження...</h1>
+            <p>Панель керування Імперією</p>
+        </div>
+
+        <div class="grid">
+            <div class="card" id="empireCard">
+                <div class="card-label">Моя Імперія</div>
+                <div id="empireContent"><div class="empty">Завантаження...</div></div>
+            </div>
+
+            <div class="card">
+                <div class="card-label">Статус</div>
+                <div id="statusContent"><div class="empty">Завантаження...</div></div>
+            </div>
+
+            <div class="card full">
+                <div class="card-label">Сповіщення</div>
+                <div id="notifications"><div class="empty">Завантаження...</div></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db } from './js/firebase.js';
+        import { ref, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const uuid = sessionStorage.getItem('uuid');
+        const playerName = sessionStorage.getItem('playerName');
+
+        if (!uuid) { window.location.href = 'login.html'; }
+
+        document.getElementById('greetingName').textContent = `Вітаємо, ${playerName || 'Гравець'}`;
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        });
+
+        // Завантажуємо імперію
+        const empiresSnap = await get(ref(db, 'mvdef/empires'));
+        let myEmpire = null;
+        let myEmpireId = null;
+
+        empiresSnap.forEach(child => {
+            if (child.val().ownerUuid === uuid) {
+                myEmpire = child.val();
+                myEmpireId = child.key;
+            }
+        });
+
+        const empireContent = document.getElementById('empireContent');
+        const statusContent = document.getElementById('statusContent');
+
+        if (myEmpire) {
+            const chunksSnap = await get(ref(db, 'mvdef/chunks'));
+            let chunkCount = 0;
+            chunksSnap.forEach(child => {
+                const c = child.val();
+                if (c.empireId === myEmpireId && c.status === 'active') chunkCount++;
+            });
+
+            empireContent.innerHTML = `
+                <h2>${myEmpire.name}</h2>
+                <p class="sub">Імператор: ${myEmpire.ownerName}</p>
+                <a href="map.html" class="btn-map">Відкрити карту →</a>
+            `;
+
+            statusContent.innerHTML = `
+                <div class="stat-row">
+                    <span class="stat-label">Статус</span>
+                    <span class="status-online">NODE / ONLINE</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Чанків</span>
+                    <span class="stat-value">${chunkCount}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">ID Імперії</span>
+                    <span class="stat-value">${myEmpireId}</span>
+                </div>
+            `;
+        } else {
+            empireContent.innerHTML = `
+                <p class="empty">У вас немає імперії.</p>
+                <p class="sub" style="margin-top:8px">Зверніться до адміністратора сервера.</p>
+            `;
+            statusContent.innerHTML = `<p class="empty">—</p>`;
+        }
+
+        // Сповіщення
+        const notifSnap = await get(ref(db, `mvdef/notifications/${uuid}`));
+        const notifDiv = document.getElementById('notifications');
+
+        if (!notifSnap.exists()) {
+            notifDiv.innerHTML = '<div class="empty">Сповіщень немає.</div>';
+        } else {
+            let html = '';
+            const updates = {};
+
+            notifSnap.forEach(child => {
+                const n = child.val();
+                html += `
+                    <div class="notif-item">
+                        <div class="notif-dot ${n.read ? 'read' : ''}"></div>
+                        <span>${n.message}</span>
+                    </div>
+                `;
+                if (!n.read) {
+                    updates[`mvdef/notifications/${uuid}/${child.key}/read`] = true;
+                }
+            });
+
+            notifDiv.innerHTML = html;
+            if (Object.keys(updates).length > 0) update(ref(db), updates);
+        }
+    </script>
+</body>
+</html>
