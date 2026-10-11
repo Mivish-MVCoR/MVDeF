@@ -198,10 +198,15 @@
 </head>
 <body>
     <header class="navbar">
-        <button class="logo" id="logoButton" type="button" aria-label="Логотип MVDeF">
-            <img class="logo-mark" src="assets/mvdef-mark.svg" alt="">
-            <span class="logo-word">MVDeF</span>
-        </button>
+        <div class="logo-area">
+            <button class="logo" id="logoButton" type="button" aria-label="Логотип MVDeF">
+                <img class="logo-mark" src="assets/mvdef-mark.svg" alt="">
+                <span class="logo-word">MVDeF</span>
+            </button>
+            <div class="logo-easter-egg" id="logoEasterEgg" role="status" aria-live="polite" hidden>
+                <p id="logoEasterEggMessage"></p>
+            </div>
+        </div>
         <nav>
             <a href="cabinet.html">Кабінет</a>
             <a href="map.html">Карта</a>
@@ -210,10 +215,6 @@
             <a href="#" id="logoutBtn">Вийти</a>
         </nav>
     </header>
-    <div class="logo-easter-egg" id="logoEasterEgg" role="status" aria-live="polite" hidden>
-        <p id="logoEasterEggMessage"></p>
-    </div>
-
     <main class="container">
         <div class="greeting">
             <h1 id="greetingName">Завантаження...</h1>
@@ -265,7 +266,10 @@
         const logoEasterEgg = document.getElementById('logoEasterEgg');
         const logoEasterEggMessage = document.getElementById('logoEasterEggMessage');
 
-        document.getElementById('logoButton').addEventListener('click', () => {
+        const logoButton = document.getElementById('logoButton');
+
+        logoButton.addEventListener('click', () => {
+            logoEasterEgg.hidden = true;
             logoClicks += 1;
             if (logoClicks === 10) {
                 sessionStorage.clear();
@@ -277,6 +281,18 @@
             if (message) {
                 logoEasterEggMessage.textContent = message;
                 logoEasterEgg.hidden = false;
+            }
+        });
+
+        logoEasterEgg.addEventListener('click', () => {
+            logoEasterEgg.hidden = true;
+        });
+
+        document.addEventListener('click', event => {
+            if (!logoEasterEgg.hidden &&
+                !logoButton.contains(event.target) &&
+                !logoEasterEgg.contains(event.target)) {
+                logoEasterEgg.hidden = true;
             }
         });
 

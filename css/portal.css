@@ -61,6 +61,12 @@ body {
     text-align: left;
 }
 
+.logo-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
 #logoButton {
     cursor: pointer;
 }
@@ -73,17 +79,20 @@ body {
     object-fit: contain;
 }
 
-.navbar .logo-word {
+.navbar .logo .logo-word {
     display: inline-block;
+    flex: 0 0 auto;
     width: auto;
     height: auto;
     max-width: 0;
+    min-width: 0;
     overflow: hidden;
     opacity: 0;
     border-radius: 0;
     background: none;
+    padding: 0;
     white-space: nowrap;
-    transition: max-width 350ms ease, opacity 220ms ease, margin-left 350ms ease;
+    transition: max-width 300ms ease, opacity 180ms ease, margin-left 300ms ease;
 }
 
 .navbar .logo:hover .logo-word,
@@ -91,6 +100,7 @@ body {
     max-width: 5em;
     margin-left: 10px;
     opacity: 1;
+    transition-duration: 600ms, 450ms, 600ms;
 }
 
 .navbar .logo-group {
@@ -100,31 +110,35 @@ body {
 }
 
 .logo-easter-egg {
-    position: fixed;
-    z-index: 1000;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    padding: 24px;
-    background: rgba(4, 7, 6, 0.82);
-    backdrop-filter: blur(8px);
-    pointer-events: none;
-    animation: logo-easter-egg-appear 240ms ease-out both;
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 8px);
+    left: 0;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    padding: 8px 12px;
+    border: 1px solid rgba(167, 217, 154, 0.3);
+    border-radius: 7px;
+    background: rgba(9, 14, 12, 0.82);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    animation: logo-easter-egg-appear 160ms ease-out both;
 }
 
 .logo-easter-egg[hidden] {
     display: none;
 }
 
-.logo-easter-egg p {
-    max-width: 720px;
+.logo-easter-egg p#logoEasterEggMessage {
+    max-width: none;
+    margin: 0;
     color: var(--green);
     font-family: Mosk, "Segoe UI", sans-serif;
-    font-size: clamp(2rem, 8vw, 5rem);
-    line-height: 1.12;
-    text-align: center;
-    text-wrap: balance;
-    text-shadow: 0 0 36px rgba(167, 217, 154, 0.35);
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: left;
+    white-space: nowrap;
 }
 
 @keyframes logo-easter-egg-appear {
@@ -137,7 +151,7 @@ body {
         gap: 10px;
     }
 
-    .navbar .logo-word {
+    .navbar .logo .logo-word {
         max-width: 5em;
         opacity: 1;
     }
