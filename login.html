@@ -18,6 +18,16 @@
         import { db } from './js/firebase.js';
         import { ref, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+        // Демо-режим: Ctrl+Shift+M
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'M') {
+                sessionStorage.setItem('uuid', 'demo-user');
+                sessionStorage.setItem('playerName', 'Demo');
+                sessionStorage.setItem('isDemo', 'true');
+                window.location.href = 'cabinet.html';
+            }
+        });
+
         const params = new URLSearchParams(window.location.search);
         const token = params.get('token');
         const status = document.getElementById('status');
