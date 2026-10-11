@@ -235,6 +235,7 @@
     <script type="module">
         import { db } from './js/firebase.js';
         import { ref, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import './js/moderator-shortcut.js';
 
         const uuid = sessionStorage.getItem('uuid');
         const playerName = sessionStorage.getItem('playerName');
@@ -246,18 +247,6 @@
         document.getElementById('logoutBtn').addEventListener('click', () => {
             sessionStorage.clear();
             window.location.href = 'login.html';
-        });
-
-        document.addEventListener('keydown', e => {
-            const target = e.target;
-            if (!e.ctrlKey || !e.shiftKey || e.key.toLowerCase() !== 'h') return;
-            if (target instanceof HTMLElement && (
-                target.isContentEditable ||
-                ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
-            )) return;
-
-            e.preventDefault();
-            window.location.href = 'moderator.html';
         });
 
         // Завантажуємо імперію
