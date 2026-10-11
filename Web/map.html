@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Карта</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0e17;
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background: rgba(10,14,23,0.95);
+            border-bottom: 1px solid #1a2540;
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .navbar .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #4ade80;
+            letter-spacing: 0.05em;
+        }
+
+        .navbar .logo span {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #4ade80;
+            border-radius: 2px;
+        }
+
+        .navbar nav a {
+            color: #8a9ab5;
+            text-decoration: none;
+            margin-left: 24px;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .navbar nav a:hover { color: #e0e0e0; }
+
+        .map-toolbar {
+            background: rgba(10,14,23,0.9);
+            border-bottom: 1px solid #1a2540;
+            padding: 8px 28px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .map-toolbar span {
+            color: #8a9ab5;
+            font-size: 0.85rem;
+            font-family: 'Consolas', monospace;
+        }
+
+        .btn-submit {
+            background: #4ade80;
+            color: #0a0e17;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-submit:hover { opacity: 0.85; }
+
+        #mapContainer {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #mapCanvas {
+            cursor: crosshair;
+            display: block;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(10,14,23,0.9);
+            border: 1px solid #1a2540;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.8rem;
+            color: #8a9ab5;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .legend-item:last-child { margin-bottom: 0; }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(10,14,23,0.95);
+            border: 1px solid #1a2540;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.82rem;
+            color: #4ade80;
+            pointer-events: none;
+            display: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo"><span></span> MVDeF</div>
+        <nav>
+            <a href="cabinet.html">Кабінет</a>
+            <a href="map.html">Карта</a>
+            <a href="#" id="logoutBtn">Вийти</a>
+        </nav>
+    </div>
+
+    <div class="map-toolbar">
+        <span id="coordsInfo">Чанк: —</span>
+        <span id="selectedInfo">Вибрано: 0 чанків</span>
+        <button class="btn-submit" id="submitBtn" style="display:none">Подати заявку</button>
+    </div>
+
+    <div id="mapContainer">
+        <canvas id="mapCanvas"></canvas>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div> Моя імперія</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#e94560"></div> Чужа імперія</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#c8a800"></div> На модерації</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ffffff"></div> Вибрано</div>
+        </div>
+    </div>
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <script type="module">
+        import { db } from './js/firebase.js';
+        import { ref, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const uuid = sessionStorage.getItem('uuid');
+        if (!uuid) { window.location.href = 'login.html'; }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        });
+
+        const canvas = document.getElementById('mapCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const container = document.getElementById('mapContainer');
+
+        const WORLD_MIN = -312;
+        const WORLD_MAX = 312;
+        const WORLD_SIZE = WORLD_MAX - WORLD_MIN;
+
+        let CHUNK_SIZE = 2;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+
+        const chunks = {};
+        const empires = {};
+        const biomes = {};
+        const selected = new Set();
+        let myEmpireId = null;
+
+        const BIOME_COLORS = {
+            'forest': '#2d5a1b',
+            'plains': '#7dab3c',
+            'desert': '#d4b96a',
+            'ocean': '#1a4d8a',
+            'mountains': '#8a8a8a',
+            'snow': '#e8e8f0',
+            'swamp': '#6b7a3d',
+            'savanna': '#c8a84b',
+            'jungle': '#1a7a1a',
+            'default': '#1a2a1a'
+        };
+
+        const EMPIRE_COLORS = [
+            '#e94560', '#4560e9', '#e96045',
+            '#9045e9', '#e9c045', '#45e9c0', '#e945c0'
+        ];
+
+        function resizeCanvas() {
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+        }
+
+        function centerMap() {
+            offsetX = canvas.width / 2 - (WORLD_SIZE * CHUNK_SIZE) / 2;
+            offsetY = canvas.height / 2 - (WORLD_SIZE * CHUNK_SIZE) / 2;
+        }
+
+        resizeCanvas();
+        centerMap();
+
+        async function loadData() {
+            const empiresSnap = await get(ref(db, 'mvdef/empires'));
+            let colorIndex = 0;
+            empiresSnap.forEach(child => {
+                const e = child.val();
+                const isMine = e.ownerUuid === uuid;
+                empires[child.key] = {
+                    name: e.name,
+                    color: isMine ? '#4ade80' : EMPIRE_COLORS[colorIndex % EMPIRE_COLORS.length]
+                };
+                if (!isMine) colorIndex++;
+                if (isMine) myEmpireId = child.key;
+            });
+
+            const biomesSnap = await get(ref(db, 'mvdef/map'));
+            biomesSnap.forEach(child => {
+                biomes[child.key] = child.val().color || BIOME_COLORS['default'];
+            });
+
+            onValue(ref(db, 'mvdef/chunks'), snapshot => {
+                Object.keys(chunks).forEach(k => delete chunks[k]);
+                snapshot.forEach(child => { chunks[child.key] = child.val(); });
+                draw();
+            });
+        }
+
+        function chunkToCanvas(cx, cz) {
+            return {
+                x: offsetX + (cx - WORLD_MIN) * CHUNK_SIZE,
+                y: offsetY + (cz - WORLD_MIN) * CHUNK_SIZE
+            };
+        }
+
+        function canvasToChunk(px, py) {
+            return {
+                cx: Math.floor((px - offsetX) / CHUNK_SIZE) + WORLD_MIN,
+                cz: Math.floor((py - offsetY) / CHUNK_SIZE) + WORLD_MIN
+            };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0a0e17';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let cx = WORLD_MIN; cx < WORLD_MAX; cx++) {
+                for (let cz = WORLD_MIN; cz < WORLD_MAX; cz++) {
+                    const pos = chunkToCanvas(cx, cz);
+                    if (pos.x + CHUNK_SIZE < 0 || pos.x > canvas.width) continue;
+                    if (pos.y + CHUNK_SIZE < 0 || pos.y > canvas.height) continue;
+
+                    const key = `world_${cx}_${cz}`;
+                    const chunk = chunks[key];
+                    const biomeColor = biomes[key] || BIOME_COLORS['default'];
+                    const isSelected = selected.has(key);
+
+                    if (chunk && chunk.status === 'active') {
+                        ctx.fillStyle = empires[chunk.empireId]?.color || '#555';
+                    } else if (chunk && chunk.status === 'pending') {
+                        ctx.fillStyle = '#c8a800';
+                    } else {
+                        ctx.fillStyle = isSelected ? '#ffffff' : biomeColor;
+                    }
+
+                    ctx.fillRect(pos.x, pos.y, CHUNK_SIZE - 0.5, CHUNK_SIZE - 0.5);
+
+                    if (isSelected) {
+                        ctx.strokeStyle = '#4ade80';
+                        ctx.lineWidth = 0.5;
+                        ctx.strokeRect(pos.x, pos.y, CHUNK_SIZE - 0.5, CHUNK_SIZE - 0.5);
+                    }
+                }
+            }
+        }
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -1 : 1;
+            const newSize = Math.max(1, Math.min(16, CHUNK_SIZE + delta));
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            offsetX = mouseX - (mouseX - offsetX) * (newSize / CHUNK_SIZE);
+            offsetY = mouseY - (mouseY - offsetY) * (newSize / CHUNK_SIZE);
+            CHUNK_SIZE = newSize;
+            draw();
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            isDragging = false;
+            dragStart = { x: e.clientX - offsetX, y: e.clientY - offsetY };
+            canvas.style.cursor = 'grabbing';
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            const newOffX = e.clientX - dragStart.x;
+            const newOffY = e.clientY - dragStart.y;
+
+            if (Math.abs(newOffX - offsetX) > 3 || Math.abs(newOffY - offsetY) > 3) {
+                isDragging = true;
+                offsetX = newOffX;
+                offsetY = newOffY;
+                draw();
+            }
+
+            const rect = canvas.getBoundingClientRect();
+            const { cx, cz } = canvasToChunk(e.clientX - rect.left, e.clientY - rect.top);
+            document.getElementById('coordsInfo').textContent = `Чанк: ${cx}, ${cz}`;
+
+            const key = `world_${cx}_${cz}`;
+            const chunk = chunks[key];
+            if (chunk && chunk.status === 'active') {
+                const empire = empires[chunk.empireId];
+                tooltip.textContent = empire ? `⚑ ${empire.name}` : '';
+                tooltip.style.display = 'block';
+                tooltip.style.left = (e.clientX + 12) + 'px';
+                tooltip.style.top = (e.clientY + 12) + 'px';
+            } else {
+                tooltip.style.display = 'none';
+            }
+        });
+
+        canvas.addEventListener('mouseup', e => {
+            canvas.style.cursor = 'crosshair';
+            if (isDragging) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const { cx, cz } = canvasToChunk(e.clientX - rect.left, e.clientY - rect.top);
+            const key = `world_${cx}_${cz}`;
+            const chunk = chunks[key];
+
+            if (!chunk || chunk.status === 'neutral') {
+                if (selected.has(key)) selected.delete(key);
+                else selected.add(key);
+                document.getElementById('selectedInfo').textContent = `Вибрано: ${selected.size} чанків`;
+                document.getElementById('submitBtn').style.display = selected.size > 0 ? 'inline-block' : 'none';
+                draw();
+            }
+        });
+
+        document.getElementById('submitBtn').addEventListener('click', async () => {
+            if (!myEmpireId) { alert('У вас немає імперії.'); return; }
+            if (selected.size === 0) return;
+
+            const updates = {};
+            selected.forEach(key => {
+                updates[`mvdef/chunks/${key}`] = { empireId: myEmpireId, status: 'pending' };
+            });
+
+            await update(ref(db), updates);
+            selected.clear();
+            document.getElementById('selectedInfo').textContent = 'Вибрано: 0 чанків';
+            document.getElementById('submitBtn').style.display = 'none';
+            alert('Заявку подано! Очікуйте підтвердження модератора.');
+        });
+
+        window.addEventListener('resize', () => { resizeCanvas(); draw(); });
+
+        loadData();
+    </script>
+</body>
+</html>

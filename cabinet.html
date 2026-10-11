@@ -193,18 +193,19 @@
             border-radius: 50%;
         }
     </style>
+    <link rel="stylesheet" href="css/portal.css">
 </head>
 <body>
-    <div class="navbar">
+    <header class="navbar">
         <div class="logo"><span></span> MVDeF</div>
         <nav>
             <a href="cabinet.html">Кабінет</a>
             <a href="map.html">Карта</a>
             <a href="#" id="logoutBtn">Вийти</a>
         </nav>
-    </div>
+    </header>
 
-    <div class="container">
+    <main class="container">
         <div class="greeting">
             <h1 id="greetingName">Завантаження...</h1>
             <p>Панель керування Імперією</p>
@@ -226,7 +227,7 @@
                 <div id="notifications"><div class="empty">Завантаження...</div></div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script type="module">
         import { db } from './js/firebase.js';

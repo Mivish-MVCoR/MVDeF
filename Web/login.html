@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Вхід</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <h1>⚑ MVDeF</h1>
+            <p>Введи команду <code>//empire</code> на сервері щоб отримати посилання для входу</p>
+            <div id="status" class="status"></div>
+        </div>
+    </div>
+    <script type="module">
+        import { db } from './js/firebase.js';
+        import { ref, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const status = document.getElementById('status');
+
+        if (!token) {
+            status.textContent = 'Токен не знайдено. Введи //empire на сервері.';
+            status.className = 'status error';
+        } else {
+            status.textContent = 'Перевіряємо токен...';
+            status.className = 'status info';
+
+            const tokenRef = ref(db, `mvdef/tokens/${token}`);
+            get(tokenRef).then(snapshot => {
+                if (!snapshot.exists()) {
+                    status.textContent = 'Токен недійсний або прострочений.';
+                    status.className = 'status error';
+                    return;
+                }
+
+                const data = snapshot.val();
+                const now = Math.floor(Date.now() / 1000);
+
+                if (data.expiresAt && data.expiresAt < now) {
+                    status.textContent = 'Токен прострочений. Введи //empire ще раз.';
+                    status.className = 'status error';
+                    remove(tokenRef);
+                    return;
+                }
+
+                sessionStorage.setItem('uuid', data.uuid);
+                sessionStorage.setItem('playerName', data.playerName);
+                remove(tokenRef);
+                window.location.href = 'cabinet.html';
+            }).catch(err => {
+                status.textContent = 'Помилка підключення до бази даних.';
+                status.className = 'status error';
+            });
+        }
+    </script>
+</body>
+</html>
