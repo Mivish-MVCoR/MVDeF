@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Редактор ролі</title>
+    <link rel="stylesheet" href="css/portal.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo"><span></span> MVDeF</div>
+        <nav>
+            <a href="cabinet.html">Кабінет</a>
+            <a href="map.html">Карта</a>
+            <a href="roles.html">Ролі</a>
+            <a href="#" id="logoutBtn">Вийти</a>
+        </nav>
+    </header>
+    <main class="container management-page role-editor-page">
+        <header class="page-title">
+            <p class="section-label">КАСТОМІЗАЦІЯ ПРАВЛІННЯ</p>
+            <h1 id="editorHeading">Нова роль</h1>
+            <p id="editorEmpireName">Завантаження правління...</p>
+        </header>
+        <form id="roleEditor" class="card role-editor standalone-role-editor">
+            <div class="form-field">
+                <label for="roleName">Назва ролі</label>
+                <input id="roleName" maxlength="32" required placeholder="Наприклад, Архітектор">
+            </div>
+            <fieldset class="permission-list">
+                <legend>Дозволи ролі</legend>
+                <label><input type="checkbox" name="permission" value="breakBlocks"> Ламати блоки на території</label>
+                <label><input type="checkbox" name="permission" value="placeBlocks"> Ставити блоки на території</label>
+                <label><input type="checkbox" name="permission" value="fightMobs"> Битися з мобами</label>
+                <label><input type="checkbox" name="permission" value="useContainers"> Користуватися скринями та контейнерами</label>
+                <label><input type="checkbox" name="permission" value="useDoors"> Відкривати двері, люки та ворота</label>
+                <label><input type="checkbox" name="permission" value="useBuckets"> Використовувати відра (вода/лава)</label>
+            </fieldset>
+            <div id="roleEditorError" class="form-message error-message" role="alert"></div>
+            <div class="editor-actions">
+                <button class="btn-map" type="submit">Зберегти роль</button>
+                <a class="btn-secondary" href="roles.html">Скасувати</a>
+            </div>
+        </form>
+    </main>
+    <script type="module" src="js/role-editor.js"></script>
+</body>
+</html>

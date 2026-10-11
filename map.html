@@ -151,13 +151,10 @@
     <div class="map-toolbar">
         <span id="coordsInfo">Чанк: —</span>
         <div class="map-image-controls">
-            <label class="map-image-button" for="worldMapFile" title="Квадратна PNG-карта зверху, центрована на чанку X:0, Z:0">Завантажити PNG світу</label>
-            <input id="worldMapFile" class="visually-hidden" type="file" accept="image/png,.png">
             <label class="map-image-toggle">
                 <input id="worldMapToggle" type="checkbox" checked disabled>
                 <span>Показати карту</span>
             </label>
-            <button id="removeWorldMap" class="map-image-remove" type="button" disabled>Прибрати карту</button>
             <label class="map-opacity-control" for="worldMapOpacity">
                 <span>Видимість карти</span>
                 <input id="worldMapOpacity" type="range" min="15" max="100" value="58" disabled>
@@ -167,7 +164,7 @@
                 <input id="worldMapScale" type="range" min="100" max="150" value="110" disabled>
                 <span id="worldMapScaleValue">110%</span>
             </label>
-            <span class="map-image-note">1360 × 1360 блоків · центр X:0, Z:0 · чанки від −42 до 42 · лише в цьому браузері</span>
+            <span class="map-image-note">Спільний файл: assets/world-map.png · 1360 × 1360 блоків · центр X:0, Z:0</span>
         </div>
     </div>
 
@@ -176,8 +173,7 @@
             <canvas id="mapCanvas"></canvas>
 
             <div class="legend">
-                <div class="legend-item"><div class="legend-dot" style="background:#a7d99a"></div> Моя імперія</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#d88076"></div> Чужа імперія</div>
+                <div id="empireLegendItems"></div>
                 <div class="legend-item"><div class="legend-dot" style="background:#d1b65e"></div> На модерації</div>
                 <div class="legend-item"><div class="legend-dot" style="background:#ffffff"></div> Вибрано</div>
             </div>
@@ -242,16 +238,12 @@
         const WORLD_MIN = -Math.floor(WORLD_CHUNK_SIZE / 2);
         const WORLD_MAX = WORLD_MIN + WORLD_CHUNK_SIZE;
         const WORLD_SIZE = WORLD_MAX - WORLD_MIN;
-        const WORLD_MAP_DATABASE = 'mvdef-world-map';
-        const WORLD_MAP_STORE = 'assets';
-        const WORLD_MAP_KEY = 'world-overview';
-        const MAX_WORLD_MAP_SIZE = 25 * 1024 * 1024;
+        const WORLD_MAP_ASSET_URL = new URL('./assets/world-map.png', document.baseURI).href;
 
         let CHUNK_SIZE = 7;
         let offsetX = 0;
         let offsetY = 0;
         let worldMapImage = null;
-        let worldMapObjectUrl = null;
         let worldMapOpacity = 0.58;
         let worldMapScale = 1.1;
         let isPointerDown = false;
@@ -264,12 +256,10 @@
         const biomes = {};
         const selected = new Set();
         let myEmpireId = null;
-        const worldMapFile = document.getElementById('worldMapFile');
         const worldMapToggle = document.getElementById('worldMapToggle');
         const worldMapOpacityInput = document.getElementById('worldMapOpacity');
         const worldMapScaleInput = document.getElementById('worldMapScale');
         const worldMapScaleValue = document.getElementById('worldMapScaleValue');
-        const removeWorldMapButton = document.getElementById('removeWorldMap');
 
         const BIOME_COLORS = {
             'forest': '#2d5a1b',
@@ -288,6 +278,15 @@
             '#d88076', '#7aa6d6', '#d2bd70',
             '#ad8ad1', '#67baa9', '#c77eae', '#91aa75'
         ];
+        const ORGANIZATION_LABELS = {
+            empire: 'Імперія', city: 'Місто', village: 'Село', country: 'Країна'
+        };
+        const GOVERNMENT_LABELS = {
+            monarchy: 'Монархія', republic: 'Республіка', democracy: 'Демократія',
+            aristocracy: 'Аристократія', oligarchy: 'Олігархія',
+            dictatorship: 'Тиранія (Диктатура)', theocracy: 'Теократія',
+            ochlocracy: 'Охлократія', junta: 'Хунта'
+        };
 
         function resizeCanvas() {
             canvas.width = container.offsetWidth;
@@ -309,142 +308,29 @@
         draw();
         restoreWorldMap();
 
-        function openWorldMapDatabase() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(WORLD_MAP_DATABASE, 1);
-                request.onupgradeneeded = () => {
-                    request.result.createObjectStore(WORLD_MAP_STORE);
-                };
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error || new Error('Не вдалося відкрити локальне сховище карти.'));
-                request.onblocked = () => reject(new Error('Локальне сховище карти заблоковане іншою вкладкою.'));
-            });
-        }
-
-        function readSavedWorldMap() {
-            return openWorldMapDatabase().then(database => new Promise((resolve, reject) => {
-                const transaction = database.transaction(WORLD_MAP_STORE, 'readonly');
-                const request = transaction.objectStore(WORLD_MAP_STORE).get(WORLD_MAP_KEY);
-                request.onsuccess = () => resolve(request.result || null);
-                request.onerror = () => reject(request.error || new Error('Не вдалося прочитати збережену карту.'));
-                transaction.oncomplete = () => database.close();
-                transaction.onerror = () => database.close();
-            }));
-        }
-
-        function saveWorldMap(blob) {
-            return openWorldMapDatabase().then(database => new Promise((resolve, reject) => {
-                const transaction = database.transaction(WORLD_MAP_STORE, 'readwrite');
-                transaction.objectStore(WORLD_MAP_STORE).put(blob, WORLD_MAP_KEY);
-                transaction.oncomplete = () => {
-                    database.close();
-                    resolve();
-                };
-                transaction.onerror = () => {
-                    const error = transaction.error || new Error('Не вдалося зберегти карту на цьому пристрої.');
-                    database.close();
-                    reject(error);
-                };
-                transaction.onabort = () => {
-                    const error = transaction.error || new Error('Збереження карти перервано.');
-                    database.close();
-                    reject(error);
-                };
-            }));
-        }
-
-        function deleteSavedWorldMap() {
-            return openWorldMapDatabase().then(database => new Promise((resolve, reject) => {
-                const transaction = database.transaction(WORLD_MAP_STORE, 'readwrite');
-                transaction.objectStore(WORLD_MAP_STORE).delete(WORLD_MAP_KEY);
-                transaction.oncomplete = () => {
-                    database.close();
-                    resolve();
-                };
-                transaction.onerror = () => {
-                    const error = transaction.error || new Error('Не вдалося видалити збережену карту.');
-                    database.close();
-                    reject(error);
-                };
-                transaction.onabort = () => {
-                    const error = transaction.error || new Error('Видалення карти перервано.');
-                    database.close();
-                    reject(error);
-                };
-            }));
-        }
-
-        function decodeWorldMap(blob) {
-            return new Promise((resolve, reject) => {
-                const objectUrl = URL.createObjectURL(blob);
-                const image = new Image();
-                image.onload = () => {
-                    if (image.naturalWidth !== image.naturalHeight) {
-                        URL.revokeObjectURL(objectUrl);
-                        reject(new Error('PNG має бути квадратним, щоб точно сумістити його з картою чанків.'));
-                        return;
-                    }
-                    resolve({ image, objectUrl });
-                };
-                image.onerror = () => {
-                    URL.revokeObjectURL(objectUrl);
-                    reject(new Error('Не вдалося прочитати це PNG-зображення.'));
-                };
-                image.src = objectUrl;
-            });
-        }
-
-        function setWorldMap({ image, objectUrl }) {
-            if (worldMapObjectUrl) URL.revokeObjectURL(worldMapObjectUrl);
+        function setWorldMap(image) {
             worldMapImage = image;
-            worldMapObjectUrl = objectUrl;
             worldMapToggle.disabled = false;
             worldMapOpacityInput.disabled = false;
             worldMapScaleInput.disabled = false;
-            removeWorldMapButton.disabled = false;
             draw();
         }
 
-        async function restoreWorldMap() {
-            try {
-                const savedMap = await readSavedWorldMap();
-                if (!savedMap) return;
-                if (savedMap.type !== 'image/png' || savedMap.size > MAX_WORLD_MAP_SIZE) {
-                    await deleteSavedWorldMap();
-                    throw new Error('Збережений файл карти не є допустимим PNG або завеликий.');
+        function restoreWorldMap() {
+            const image = new Image();
+            image.onload = () => {
+                if (image.naturalWidth !== image.naturalHeight) {
+                    showMapToast('Файл assets/world-map.png має бути квадратним.', true);
+                    return;
                 }
-                setWorldMap(await decodeWorldMap(savedMap));
-            } catch (error) {
-                console.error('Не вдалося відновити карту світу:', error);
-                showMapToast(`Не вдалося відкрити збережену PNG-карту: ${error instanceof Error ? error.message : 'невідома помилка'}`, true);
-            }
+                setWorldMap(image);
+            };
+            image.onerror = () => {
+                console.error(`Не вдалося завантажити спільну карту: ${WORLD_MAP_ASSET_URL}`);
+                showMapToast('Не знайдено assets/world-map.png. Додайте PNG до файлів сайту.', true);
+            };
+            image.src = WORLD_MAP_ASSET_URL;
         }
-
-        worldMapFile.addEventListener('change', async () => {
-            const file = worldMapFile.files?.[0];
-            worldMapFile.value = '';
-            if (!file) return;
-            if (file.type !== 'image/png' || file.size > MAX_WORLD_MAP_SIZE) {
-                showMapToast(file.size > MAX_WORLD_MAP_SIZE
-                    ? 'PNG-карта має бути меншою за 25 МБ.'
-                    : 'Потрібно вибрати файл PNG.', true);
-                return;
-            }
-
-            let decodedMap;
-            try {
-                decodedMap = await decodeWorldMap(file);
-                await saveWorldMap(file);
-                setWorldMap(decodedMap);
-                showMapToast('PNG-карту збережено в цьому браузері.');
-            } catch (error) {
-                if (decodedMap && decodedMap.objectUrl !== worldMapObjectUrl) {
-                    URL.revokeObjectURL(decodedMap.objectUrl);
-                }
-                console.error('Не вдалося завантажити PNG-карту:', error);
-                showMapToast(`Не вдалося завантажити PNG-карту: ${error instanceof Error ? error.message : 'невідома помилка'}`, true);
-            }
-        });
 
         worldMapOpacityInput.addEventListener('input', () => {
             worldMapOpacity = Number(worldMapOpacityInput.value) / 100;
@@ -459,34 +345,49 @@
 
         worldMapToggle.addEventListener('change', draw);
 
-        removeWorldMapButton.addEventListener('click', async () => {
-            try {
-                await deleteSavedWorldMap();
-                if (worldMapObjectUrl) URL.revokeObjectURL(worldMapObjectUrl);
-                worldMapObjectUrl = null;
-                worldMapImage = null;
-                worldMapToggle.checked = true;
-                worldMapToggle.disabled = true;
-                worldMapOpacityInput.disabled = true;
-                worldMapScaleInput.disabled = true;
-                worldMapScaleInput.value = '110';
-                worldMapScaleValue.textContent = '110%';
-                worldMapScale = 1.1;
-                removeWorldMapButton.disabled = true;
-                draw();
-                showMapToast('PNG-карту прибрано з цього браузера.');
-            } catch (error) {
-                console.error('Не вдалося прибрати PNG-карту:', error);
-                showMapToast(`Не вдалося прибрати карту: ${error instanceof Error ? error.message : 'невідома помилка'}`, true);
-            }
-        });
-
         function updateEmpireSummary() {
             const empire = empires[myEmpireId];
             document.getElementById('empireId').textContent = myEmpireId ? `ІМПЕРІЯ #${myEmpireId}` : 'ІМПЕРІЯ';
             document.getElementById('empireName').textContent = empire?.name || 'Імперію не створено';
-            document.getElementById('empireAvatar').textContent = empire?.name?.trim().charAt(0).toUpperCase() || '⚑';
+            const avatar = document.getElementById('empireAvatar');
+            if (empire?.avatar?.startsWith('data:image/jpeg;base64,')) {
+                avatar.replaceChildren();
+                const image = document.createElement('img');
+                image.src = empire.avatar;
+                image.alt = `Аватар ${empire.name}`;
+                avatar.append(image);
+            } else {
+                avatar.textContent = empire?.name?.trim().charAt(0).toUpperCase() || '⚑';
+            }
             document.getElementById('playerName').textContent = sessionStorage.getItem('playerName') || 'Імператор';
+        }
+
+        function updateEmpireLegend() {
+            const container = document.getElementById('empireLegendItems');
+            container.replaceChildren();
+            Object.entries(empires).forEach(([id, empire]) => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                const swatch = document.createElement('div');
+                swatch.className = 'legend-dot';
+                swatch.style.background = empire.color;
+                const label = document.createElement('span');
+                label.textContent = id === myEmpireId ? `Моя: ${empire.name}` : empire.name;
+                label.title = [
+                    empire.description,
+                    ORGANIZATION_LABELS[empire.organizationLevel],
+                    GOVERNMENT_LABELS[empire.government]
+                ].filter(Boolean).join(' · ');
+                if (empire.avatar?.startsWith('data:image/jpeg;base64,')) {
+                    const avatar = document.createElement('img');
+                    avatar.className = 'legend-avatar';
+                    avatar.src = empire.avatar;
+                    avatar.alt = '';
+                    item.append(avatar);
+                }
+                item.append(swatch, label);
+                container.append(item);
+            });
         }
 
         function updateEmpireChunkCount() {
@@ -537,23 +438,39 @@
         }
 
         async function loadData() {
-            const empiresSnap = await get(ref(db, 'mvdef/empires'));
-            let colorIndex = 0;
-            empiresSnap.forEach(child => {
-                const e = child.val();
-                const isMine = e.ownerUuid === uuid;
-                empires[child.key] = {
-                    name: e.name,
-                    color: isMine ? '#a7d99a' : EMPIRE_COLORS[colorIndex % EMPIRE_COLORS.length]
-                };
-                if (!isMine) colorIndex++;
-                if (isMine) myEmpireId = child.key;
-            });
-            updateEmpireSummary();
-
             const biomesSnap = await get(ref(db, 'mvdef/map'));
             biomesSnap.forEach(child => {
                 biomes[child.key] = child.val().color || BIOME_COLORS['default'];
+            });
+
+            onValue(ref(db, 'mvdef/empires'), snapshot => {
+                Object.keys(empires).forEach(key => delete empires[key]);
+                myEmpireId = null;
+                let colorIndex = 0;
+                snapshot.forEach(child => {
+                    const empire = child.val();
+                    const isMine = empire.ownerUuid === uuid;
+                    empires[child.key] = {
+                        name: empire.name,
+                        description: empire.description || '',
+                        organizationLevel: empire.organizationLevel || 'empire',
+                        government: empire.government || 'monarchy',
+                        avatar: empire.avatar || null,
+                        color: /^#[0-9a-f]{6}$/i.test(empire.color || '')
+                            ? empire.color
+                            : isMine ? '#a7d99a' : EMPIRE_COLORS[colorIndex % EMPIRE_COLORS.length]
+                    };
+                    colorIndex++;
+                    if (isMine) myEmpireId = child.key;
+                });
+                updateEmpireSummary();
+                updateEmpireLegend();
+                updateEmpireChunkCount();
+                updateSelectionSummary();
+                draw();
+            }, error => {
+                console.error('Не вдалося завантажити список імперій:', error);
+                showMapToast(`Не вдалося оновити імперії: ${error.message}`, true);
             });
 
             onValue(ref(db, 'mvdef/chunks'), snapshot => {
@@ -689,8 +606,31 @@
             const chunk = chunks[key];
             if (chunk && chunk.status === 'active') {
                 const empire = empires[chunk.empireId];
-                tooltip.textContent = empire ? `⚑ ${empire.name}` : '';
-                tooltip.style.display = 'block';
+                tooltip.replaceChildren();
+                if (empire) {
+                    if (empire.avatar?.startsWith('data:image/jpeg;base64,')) {
+                        const avatar = document.createElement('img');
+                        avatar.className = 'tooltip-avatar';
+                        avatar.src = empire.avatar;
+                        avatar.alt = '';
+                        tooltip.append(avatar);
+                    }
+                    const details = document.createElement('div');
+                    details.className = 'tooltip-details';
+                    const name = document.createElement('strong');
+                    name.textContent = `⚑ ${empire.name}`;
+                    details.append(name);
+                    if (empire.description) {
+                        const description = document.createElement('span');
+                        description.textContent = empire.description;
+                        details.append(description);
+                    }
+                    const type = document.createElement('span');
+                    type.textContent = `${ORGANIZATION_LABELS[empire.organizationLevel] || 'Імперія'} · ${GOVERNMENT_LABELS[empire.government] || 'Монархія'}`;
+                    details.append(type);
+                    tooltip.append(details);
+                }
+                tooltip.style.display = 'flex';
                 tooltip.style.left = (e.clientX + 12) + 'px';
                 tooltip.style.top = (e.clientY + 12) + 'px';
             } else {

@@ -312,6 +312,54 @@ body:has(#mapCanvas) .navbar {
     color: var(--green);
 }
 
+.navbar nav a[hidden] {
+    display: none;
+}
+
+.btn-map[hidden],
+.btn-secondary[hidden],
+.text-button[hidden] {
+    display: none;
+}
+
+.empire-avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+}
+
+.cabinet-empire-avatar {
+    width: 74px;
+    height: 74px;
+    margin-bottom: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.legend #empireLegendItems {
+    max-height: min(38vh, 280px);
+    overflow: auto;
+}
+
+.legend #empireLegendItems .legend-item {
+    max-width: 240px;
+}
+
+.legend #empireLegendItems .legend-item span {
+    overflow-wrap: anywhere;
+}
+
+.legend-avatar {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    border-radius: 3px;
+    object-fit: cover;
+}
+
 .btn-submit {
     padding: 9px 16px;
     font-size: 0.84rem;
@@ -505,9 +553,38 @@ body:has(#mapCanvas) .navbar {
 }
 
 .tooltip {
+    display: flex;
+    max-width: min(310px, calc(100vw - 24px));
+    align-items: flex-start;
+    gap: 10px;
+    white-space: normal;
     background: rgba(9, 14, 12, 0.97);
     border-color: rgba(167, 217, 154, 0.3);
     color: var(--green);
+}
+
+.tooltip-avatar {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.tooltip-details {
+    display: grid;
+    gap: 5px;
+}
+
+.tooltip-details strong {
+    color: var(--green);
+}
+
+.tooltip-details span {
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
 }
 
 #authSection {
@@ -785,5 +862,406 @@ body:has(#mapCanvas) .navbar {
 
     .map-sidebar {
         padding: 18px 16px;
+    }
+}
+
+.management-page {
+    max-width: 1180px;
+}
+
+.page-title {
+    margin-bottom: 26px;
+}
+
+.page-title h1 {
+    margin-top: 5px;
+}
+
+.management-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(270px, 0.8fr);
+    align-items: start;
+    gap: 18px;
+}
+
+.management-form,
+.management-aside,
+.roles-controls {
+    display: grid;
+    gap: 16px;
+}
+
+.form-field {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    margin-bottom: 17px;
+}
+
+.form-field > label,
+.permission-list legend {
+    color: var(--text);
+    font-size: 0.84rem;
+    font-weight: 650;
+}
+
+.form-field input:not([type="color"]):not([type="file"]),
+.form-field textarea,
+.form-field select {
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    outline: none;
+    background: rgba(5, 9, 7, 0.65);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.88rem;
+}
+
+.form-field textarea {
+    min-height: 88px;
+    resize: vertical;
+}
+
+.form-field input:focus,
+.form-field textarea:focus,
+.form-field select:focus {
+    border-color: var(--green-strong);
+    box-shadow: 0 0 0 2px rgba(129, 200, 120, 0.12);
+}
+
+.form-field small,
+.form-hint,
+.government-info small,
+.map-preview-caption {
+    color: var(--muted);
+    font-size: 0.76rem;
+    line-height: 1.55;
+}
+
+.optional-label {
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.avatar-picker {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.avatar-picker img,
+.avatar-picker > span {
+    display: grid;
+    width: 76px;
+    height: 76px;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(129, 200, 120, 0.08);
+    color: var(--green);
+    font-size: 2rem;
+    object-fit: cover;
+}
+
+.avatar-picker [hidden] {
+    display: none;
+}
+
+.btn-secondary,
+.text-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 7px 11px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.btn-secondary:hover,
+.text-button:hover {
+    border-color: rgba(167, 217, 154, 0.4);
+    color: var(--green);
+}
+
+.text-button {
+    min-height: 30px;
+    padding: 5px 8px;
+    border-color: transparent;
+    background: transparent;
+}
+
+.danger-text {
+    color: var(--red);
+}
+
+.color-picker-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.color-picker-row input[type="color"] {
+    width: 42px;
+    height: 38px;
+    padding: 3px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface-raised);
+    cursor: pointer;
+}
+
+.color-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.color-swatch {
+    width: 24px;
+    height: 24px;
+    border: 1px solid rgba(255,255,255,.32);
+    border-radius: 50%;
+    background: var(--swatch-color);
+    cursor: pointer;
+}
+
+.color-picker-row output {
+    color: var(--muted);
+    font: 0.75rem Consolas, monospace;
+}
+
+.form-submit {
+    margin-top: 2px;
+}
+
+.form-message {
+    min-height: 0;
+    margin-top: 8px;
+    color: var(--green);
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
+}
+
+.form-message:empty {
+    display: none;
+}
+
+.error-message {
+    color: var(--red);
+}
+
+.creation-message {
+    border-color: rgba(167, 217, 154, 0.28);
+}
+
+.creation-message > p:last-child,
+.government-info > p:not(.card-label) {
+    color: #c6cec8;
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+
+.government-info h2 {
+    margin: 0 0 10px;
+    color: var(--text);
+    font-size: 1.18rem;
+}
+
+.government-info small {
+    display: block;
+    margin-top: 14px;
+}
+
+.roles-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.9fr);
+    align-items: start;
+    gap: 18px;
+}
+
+.roles-controls > .card {
+    min-width: 0;
+}
+
+.roles-controls .form-grid {
+    margin-bottom: 4px;
+}
+
+.roles-controls .form-field {
+    margin-bottom: 8px;
+}
+
+.roles-controls .btn-map {
+    margin-top: 8px;
+}
+
+.section-heading-row,
+.editor-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.section-title {
+    color: var(--text);
+    font-size: 1.05rem;
+}
+
+.count-badge,
+.role-fixed {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+.assignment-list,
+.custom-role-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.assignment-row,
+.custom-role-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+}
+
+.assignment-identity,
+.custom-role-row > div {
+    display: grid;
+    min-width: 0;
+    flex: 1;
+    gap: 4px;
+}
+
+.assignment-identity strong,
+.custom-role-row strong {
+    overflow-wrap: anywhere;
+    color: var(--text);
+    font-size: 0.84rem;
+}
+
+.assignment-identity span,
+.custom-role-row > div > span {
+    color: var(--muted);
+    font-size: 0.72rem;
+    line-height: 1.45;
+}
+
+.role-color-dot {
+    flex: 0 0 11px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--role-color);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--role-color), transparent 45%);
+}
+
+.role-editor {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+}
+
+.role-editor[hidden] {
+    display: none;
+}
+
+.permission-list {
+    display: grid;
+    gap: 10px;
+    margin: 12px 0;
+    padding: 13px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+}
+
+.permission-list label {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.permission-list input {
+    accent-color: var(--green-strong);
+}
+
+.roles-map-card {
+    position: sticky;
+    top: 16px;
+}
+
+.map-preview-caption {
+    margin: -5px 0 12px;
+}
+
+.roles-map-frame {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: #101713;
+}
+
+.roles-map-frame canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+@media (max-width: 760px) {
+    .management-layout,
+    .roles-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .roles-map-card {
+        position: static;
+    }
+}
+
+@media (max-width: 540px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .section-heading-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .assignment-row,
+    .custom-role-row {
+        flex-wrap: wrap;
     }
 }

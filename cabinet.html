@@ -201,6 +201,8 @@
         <nav>
             <a href="cabinet.html">Кабінет</a>
             <a href="map.html">Карта</a>
+            <a href="roles.html" id="rolesLink" hidden>Ролі</a>
+            <a href="empire-edit.html" id="editEmpireLink" hidden>Правління</a>
             <a href="#" id="logoutBtn">Вийти</a>
         </nav>
     </header>
@@ -215,6 +217,7 @@
             <div class="card" id="empireCard">
                 <div class="card-label">Моя Імперія</div>
                 <div id="empireContent"><div class="empty">Завантаження...</div></div>
+                <a href="empire-create.html" class="btn-map" id="createEmpireLink" hidden>Створити правління →</a>
             </div>
 
             <div class="card">
@@ -273,6 +276,8 @@
         const statusContent = document.getElementById('statusContent');
 
         if (myEmpire) {
+            document.getElementById('rolesLink').hidden = false;
+            document.getElementById('editEmpireLink').hidden = false;
             const chunksSnap = await get(ref(db, 'mvdef/chunks'));
             let chunkCount = 0;
             chunksSnap.forEach(child => {
@@ -280,11 +285,30 @@
                 if (c.empireId === myEmpireId && c.status === 'active') chunkCount++;
             });
 
-            empireContent.innerHTML = `
-                <h2>${myEmpire.name}</h2>
-                <p class="sub">Імператор: ${myEmpire.ownerName}</p>
-                <a href="map.html" class="btn-map">Відкрити карту →</a>
-            `;
+            const empireHeading = document.createElement('h2');
+            empireHeading.textContent = myEmpire.name || 'Без назви';
+            const empireDetails = [];
+            if (myEmpire.avatar?.startsWith('data:image/jpeg;base64,')) {
+                const avatar = document.createElement('img');
+                avatar.className = 'cabinet-empire-avatar';
+                avatar.src = myEmpire.avatar;
+                avatar.alt = `Аватар ${myEmpire.name}`;
+                empireDetails.push(avatar);
+            }
+            if (myEmpire.description) {
+                const description = document.createElement('p');
+                description.className = 'sub';
+                description.textContent = myEmpire.description;
+                empireDetails.push(description);
+            }
+            const emperor = document.createElement('p');
+            emperor.className = 'sub';
+            emperor.textContent = `Імператор: ${myEmpire.ownerName || playerName || 'Гравець'}`;
+            const mapLink = document.createElement('a');
+            mapLink.href = 'map.html';
+            mapLink.className = 'btn-map';
+            mapLink.textContent = 'Відкрити карту →';
+            empireContent.replaceChildren(...empireDetails, empireHeading, emperor, mapLink);
 
             statusContent.innerHTML = `
                 <div class="stat-row">
@@ -303,8 +327,9 @@
         } else {
             empireContent.innerHTML = `
                 <p class="empty">У вас немає імперії.</p>
-                <p class="sub" style="margin-top:8px">Зверніться до адміністратора сервера.</p>
+                <p class="sub" style="margin-top:8px">Створи правління, налаштуй його та подай заявку на територію.</p>
             `;
+            document.getElementById('createEmpireLink').hidden = false;
             statusContent.innerHTML = `<p class="empty">—</p>`;
         }
 

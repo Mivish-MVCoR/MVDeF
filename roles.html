@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Ролі імперії</title>
+    <link rel="stylesheet" href="css/portal.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo"><span></span> MVDeF</div>
+        <nav>
+            <a href="cabinet.html">Кабінет</a>
+            <a href="map.html">Карта</a>
+            <a href="empire-edit.html">Правління</a>
+            <a href="#" id="logoutBtn">Вийти</a>
+        </nav>
+    </header>
+    <main class="container management-page roles-page">
+        <header class="page-title">
+            <p class="section-label">УПРАВЛІННЯ ГРАВЦЯМИ</p>
+            <h1>Ролі імперії</h1>
+            <p id="rolesEmpireName">Завантаження правління...</p>
+        </header>
+        <div class="roles-layout">
+            <section class="roles-controls">
+                <section class="card">
+                    <p class="card-label">ПРИЗНАЧИТИ РОЛЬ</p>
+                    <form id="assignmentForm" class="assignment-form">
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="playerNickname">Нік гравця</label>
+                                <input id="playerNickname" maxlength="16" autocomplete="off" pattern="[A-Za-z0-9_]{1,16}" required placeholder="Minecraft нік">
+                            </div>
+                            <div class="form-field">
+                                <label for="roleSelect">Роль</label>
+                                <select id="roleSelect" required></select>
+                            </div>
+                        </div>
+                        <button class="btn-map" type="submit">Призначити роль</button>
+                    </form>
+                    <p class="form-hint">Для нового гравця за замовчуванням вибрана роль «Прохожий».</p>
+                    <div id="assignmentMessage" class="form-message" role="status"></div>
+                </section>
+                <section class="card">
+                    <div class="section-heading-row">
+                        <div>
+                            <p class="card-label">ПІДОПІЧНІ</p>
+                            <h2 class="section-title">Призначені ролі</h2>
+                        </div>
+                        <span class="count-badge" id="assignmentCount">0</span>
+                    </div>
+                    <div id="assignmentList" class="assignment-list"><p class="empty">Завантаження...</p></div>
+                </section>
+                <section class="card">
+                    <div class="section-heading-row">
+                        <div>
+                            <p class="card-label">КАСТОМІЗАЦІЯ</p>
+                            <h2 class="section-title">Ролі правління</h2>
+                        </div>
+                        <button id="newRoleButton" class="btn-secondary" type="button">+ Нова роль</button>
+                    </div>
+                    <div id="customRoleList" class="custom-role-list"></div>
+                </section>
+            </section>
+            <aside class="card roles-map-card">
+                <p class="card-label">ТЕРИТОРІЇ ПРАВЛІНЬ</p>
+                <p class="map-preview-caption">Карта лише для перегляду</p>
+                <div class="roles-map-frame">
+                    <canvas id="rolesMap" width="510" height="510" aria-label="Попередній перегляд територій імперій"></canvas>
+                </div>
+                <div id="rolesMapMessage" class="form-message"></div>
+            </aside>
+        </div>
+    </main>
+    <script type="module" src="js/roles.js"></script>
+</body>
+</html>

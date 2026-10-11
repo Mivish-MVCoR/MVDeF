@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Налаштування правління</title>
+    <link rel="stylesheet" href="css/portal.css">
+</head>
+<body data-empire-mode="edit">
+    <header class="navbar">
+        <div class="logo"><span></span> MVDeF</div>
+        <nav>
+            <a href="cabinet.html">Кабінет</a>
+            <a href="map.html">Карта</a>
+            <a href="roles.html">Ролі</a>
+            <a href="#" id="logoutBtn">Вийти</a>
+        </nav>
+    </header>
+    <main class="container management-page">
+        <header class="page-title">
+            <p class="section-label">НАЛАШТУВАННЯ</p>
+            <h1>Моє правління</h1>
+            <p>Зміни одразу з'являться на мапі та в кабінеті.</p>
+        </header>
+        <div class="management-layout empire-layout">
+            <form id="empireForm" class="card management-form">
+                <div class="form-field">
+                    <label for="empireAvatarFile">Аватар імперії</label>
+                    <div class="avatar-picker">
+                        <img id="empireAvatarPreview" alt="Попередній перегляд аватара" hidden>
+                        <span id="avatarPlaceholder" aria-hidden="true">⚑</span>
+                        <label class="btn-secondary" for="empireAvatarFile">Завантажити аватар</label>
+                        <input id="empireAvatarFile" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp">
+                        <button id="clearAvatar" class="text-button" type="button" hidden>Прибрати</button>
+                    </div>
+                    <small>Аватар буде видимий усім гравцям. Зображення зменшується перед збереженням.</small>
+                </div>
+                <div class="form-field">
+                    <label for="empireNameInput">Назва імперії</label>
+                    <input id="empireNameInput" name="name" maxlength="40" required placeholder="Назва правління">
+                </div>
+                <div class="form-field">
+                    <label for="empireDescription">Опис <span class="optional-label">необов'язково</span></label>
+                    <textarea id="empireDescription" name="description" maxlength="600" rows="3" placeholder="Коротко розкажи про своє правління"></textarea>
+                </div>
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="organizationLevel">Рівень просторової організації влади</label>
+                        <select id="organizationLevel" name="organizationLevel" required>
+                            <option value="empire">Імперія</option>
+                            <option value="city">Місто</option>
+                            <option value="village">Село</option>
+                            <option value="country">Країна</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="government">Форма правління</label>
+                        <select id="government" name="government" required>
+                            <option value="monarchy">Монархія</option>
+                            <option value="republic">Республіка</option>
+                            <option value="democracy">Демократія</option>
+                            <option value="aristocracy">Аристократія</option>
+                            <option value="oligarchy">Олігархія</option>
+                            <option value="dictatorship">Тиранія (Диктатура)</option>
+                            <option value="theocracy">Теократія</option>
+                            <option value="ochlocracy">Охлократія</option>
+                            <option value="junta">Хунта</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label>Колір територій</label>
+                    <div class="color-picker-row">
+                        <input id="empireColor" type="color" value="#81c878" aria-label="RGB колір території">
+                        <div id="colorPresets" class="color-presets" aria-label="Готові кольори"></div>
+                        <output id="colorValue" for="empireColor">#81C878</output>
+                    </div>
+                    <small>Колір відрізняє територію від інших імперій на мапі.</small>
+                </div>
+                <div id="formError" class="form-message error-message" role="alert"></div>
+                <button class="btn-map form-submit" id="saveEmpire" type="submit">Зберегти зміни</button>
+            </form>
+            <aside class="management-aside">
+                <section class="card government-info">
+                    <p class="card-label">ФОРМА ПРАВЛІННЯ</p>
+                    <h2 id="governmentTitle"></h2>
+                    <p id="governmentDescription"></p>
+                    <small>Форма правління має декоративний характер і може отримати розвиток пізніше.</small>
+                </section>
+            </aside>
+        </div>
+    </main>
+    <script type="module" src="js/empire-form.js"></script>
+</body>
+</html>
