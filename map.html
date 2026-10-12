@@ -155,18 +155,9 @@
     <div class="map-toolbar">
         <span id="coordsInfo">Чанк: —</span>
         <div class="map-image-controls">
-            <label class="map-image-toggle">
+            <label class="map-image-toggle" for="worldMapToggle">
                 <input id="worldMapToggle" type="checkbox" checked disabled>
                 <span>Показати карту</span>
-            </label>
-            <label class="map-opacity-control" for="worldMapOpacity">
-                <span>Видимість карти</span>
-                <input id="worldMapOpacity" type="range" min="15" max="100" value="58">
-            </label>
-            <label class="map-opacity-control" for="worldMapScale">
-                <span>Розмір PNG</span>
-                <input id="worldMapScale" type="range" min="10" max="200" value="110">
-                <span id="worldMapScaleValue">110%</span>
             </label>
             <span class="map-image-note">Спільний файл: assets/world-map.png · 218 × 218 чанків (3488 × 3488 блоків) · центр X:0, Z:0</span>
         </div>
@@ -253,7 +244,7 @@
         let offsetY = 0;
         let worldMapImage = null;
         let worldMapOpacity = 0.58;
-        let worldMapScale = 1.1;
+        const worldMapScale = 1;
         let isPointerDown = false;
         let isDragging = false;
         let hasNavigated = false;
@@ -265,9 +256,6 @@
         const selected = new Set();
         let myEmpireId = null;
         const worldMapToggle = document.getElementById('worldMapToggle');
-        const worldMapOpacityInput = document.getElementById('worldMapOpacity');
-        const worldMapScaleInput = document.getElementById('worldMapScale');
-        const worldMapScaleValue = document.getElementById('worldMapScaleValue');
 
         const BIOME_COLORS = {
             'forest': '#2d5a1b',
@@ -319,8 +307,6 @@
         function setWorldMap(image) {
             worldMapImage = image;
             worldMapToggle.disabled = false;
-            worldMapOpacityInput.disabled = false;
-            worldMapScaleInput.disabled = false;
             draw();
         }
 
@@ -345,17 +331,6 @@
             };
             image.src = WORLD_MAP_ASSET_URLS[assetIndex];
         }
-
-        worldMapOpacityInput.addEventListener('input', () => {
-            worldMapOpacity = Number(worldMapOpacityInput.value) / 100;
-            draw();
-        });
-
-        worldMapScaleInput.addEventListener('input', () => {
-            worldMapScale = Number(worldMapScaleInput.value) / 100;
-            worldMapScaleValue.textContent = `${worldMapScaleInput.value}%`;
-            draw();
-        });
 
         worldMapToggle.addEventListener('change', draw);
 

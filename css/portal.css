@@ -505,6 +505,7 @@ body:has(#mapCanvas) .navbar {
     justify-content: flex-end;
     flex-wrap: wrap;
     gap: 8px 12px;
+    margin-left: auto;
 }
 
 .map-image-button,
@@ -1109,7 +1110,7 @@ body:has(#mapCanvas) .navbar {
     }
 
     .map-image-controls {
-        justify-content: flex-start;
+        justify-content: flex-end;
         gap: 7px;
     }
 
@@ -1125,7 +1126,7 @@ body:has(#mapCanvas) .navbar {
     }
 
     .map-image-controls .map-image-note {
-        text-align: left;
+        text-align: right;
     }
 
     .map-toolbar span {
