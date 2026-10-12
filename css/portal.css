@@ -786,6 +786,23 @@ body:has(#mapCanvas) .navbar {
     color: #111811;
 }
 
+.selection-actions .btn-clear-selection {
+    border-color: rgba(167, 217, 154, 0.32);
+    border-radius: 4px;
+    background: rgba(167, 217, 154, 0.1);
+    color: var(--green);
+}
+
+.selection-actions .btn-clear-selection:not(:disabled):hover {
+    border-color: rgba(167, 217, 154, 0.56);
+    background: rgba(167, 217, 154, 0.18);
+}
+
+.selection-actions .btn-clear-selection:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+}
+
 .btn-surrender {
     border-color: rgba(237, 119, 119, 0.34) !important;
     background: rgba(183, 69, 69, 0.14);

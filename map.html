@@ -200,6 +200,7 @@
                 <div class="selection-actions">
                     <button class="btn-submit" id="submitBtn" type="button" style="display:none">Подати заявку</button>
                     <button class="btn-surrender" id="surrenderBtn" type="button" style="display:none">Віддати території</button>
+                    <button class="btn-clear-selection" id="clearSelectionBtn" type="button" disabled>Скинути вибране</button>
                 </div>
                 <p class="selection-hint">Вибери вільні території для заявки або свої чанки для відмови від них.</p>
             </div>
@@ -411,6 +412,7 @@
             const action = getSelectionAction();
             document.getElementById('submitBtn').style.display = action === 'claim' ? 'block' : 'none';
             document.getElementById('surrenderBtn').style.display = action === 'surrender' ? 'block' : 'none';
+            document.getElementById('clearSelectionBtn').disabled = selected.size === 0;
         }
 
         function showMapToast(message, isError = false) {
@@ -695,6 +697,12 @@
 
         document.getElementById('submitBtn').addEventListener('click', () => submitTerritoryRequest('claim'));
         document.getElementById('surrenderBtn').addEventListener('click', () => submitTerritoryRequest('surrender'));
+        document.getElementById('clearSelectionBtn').addEventListener('click', () => {
+            if (selected.size === 0) return;
+            selected.clear();
+            updateSelectionSummary();
+            draw();
+        });
 
         window.addEventListener('resize', () => {
             resizeCanvas();
