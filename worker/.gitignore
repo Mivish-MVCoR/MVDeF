@@ -1,0 +1,5 @@
+.dev.vars*
+.env*
+*.local.json
+*.local
+*.secret

@@ -1,10 +1,6 @@
 import { auth } from "./firebase.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { CLOUDFLARE_API_URL, SITE_SESSION_KEY } from "./cloudflare-config.js";
 
-const functions = getFunctions(undefined, "europe-west1");
-const getStateCall = httpsCallable(functions, "getFishingState");
-const fishingActionCall = httpsCallable(functions, "fishingAction");
 const elements = Object.fromEntries([
     "fishingNotice", "fishingError", "fishingLevel", "fishingWallet", "venueSelect",
     "fishingWeather", "fishingTime", "fishingScene", "fishingSceneCaption", "fishingHint",
@@ -39,6 +35,30 @@ const gameResultText = {
     "caught": ["Улов!", "Рибу додано до інвентарю."]
 };
 
+async function apiCall(path, { method = "GET", body } = {}) {
+    const token = sessionStorage.getItem(SITE_SESSION_KEY);
+    if (!token) {
+        const error = new Error("Увійди через Minecraft.");
+        error.code = "unauthenticated";
+        throw error;
+    }
+    const response = await fetch(`${CLOUDFLARE_API_URL}${path}`, {
+        method,
+        headers: {
+            authorization: `Bearer ${token}`,
+            ...(body ? { "content-type": "application/json" } : {})
+        },
+        ...(body ? { body: JSON.stringify(body) } : {})
+    });
+    const data = await response.json();
+    if (!response.ok) {
+        const error = new Error(data.error?.message || "Не вдалося виконати запит.");
+        error.code = data.error?.code || "unknown";
+        throw error;
+    }
+    return data;
+}
+
 function showError(message) {
     elements.fishingError.textContent = message;
     elements.fishingError.hidden = false;
@@ -57,10 +77,10 @@ function clearMessages() {
 }
 
 function readableError(error) {
-    if (error?.code === "functions/unauthenticated") {
+    if (error?.code === "unauthenticated") {
         return "Сеанс входу завершився. Увійди на сайт через нове посилання з Minecraft.";
     }
-    if (error?.code === "functions/permission-denied") {
+    if (error?.code === "permission-denied") {
         return "Риболовля доступна лише після входу через Minecraft, не в демо-режимі.";
     }
     return error?.message?.replace(/^FirebaseError:\s*/, "") || "Не вдалося підключитися до рибальського сервера.";
@@ -417,8 +437,8 @@ function updatePage() {
 
 async function loadState() {
     try {
-        const result = await getStateCall();
-        ({ player, world, catalog } = result.data);
+        const result = await apiCall("/api/fishing/state");
+        ({ player, world, catalog } = result);
         populateShop();
         updatePage();
     } catch (error) {
@@ -433,15 +453,18 @@ async function performAction(action, payload = {}, { quiet = false } = {}) {
     renderGameStage();
     if (!quiet) clearMessages();
     try {
-        const response = await fishingActionCall({ action, payload });
-        player = response.data.player;
-        world = response.data.world || world;
+        const response = await apiCall("/api/fishing/action", {
+            method: "POST",
+            body: { action, payload }
+        });
+        player = response.player;
+        world = response.world || world;
         updatePage();
-        return response.data;
+        return response;
     } catch (error) {
         console.error(`Не вдалося виконати дію риболовлі «${action}»:`, error);
         showError(readableError(error));
-        if (error?.code === "functions/unauthenticated") {
+        if (error?.code === "unauthenticated") {
             await auth.signOut().catch(signOutError => console.error("Не вдалося очистити Firebase-сеанс:", signOutError));
             window.location.replace("login.html");
         }
@@ -495,19 +518,13 @@ setInterval(() => {
     if (world) renderWorld();
 }, 1000);
 
-onAuthStateChanged(auth, user => {
-    if (!user) {
-        showError(sessionStorage.getItem("isDemo") === "true"
-            ? "Риболовля поки недоступна в демо-режимі. Увійди через посилання з Minecraft."
-            : "Для риболовлі потрібно увійти через Minecraft.");
-        elements.castBtn.disabled = true;
-        return;
-    }
-
-    if (user.uid !== sessionStorage.getItem("uuid")) {
-        showError("Сеанс на сайті не збігається. Перезавантаж сторінку або увійди знову.");
-        return;
-    }
-
+if (sessionStorage.getItem("isDemo") === "true" ||
+    !sessionStorage.getItem(SITE_SESSION_KEY) ||
+    !sessionStorage.getItem("uuid") ||
+    sessionStorage.getItem("uuid") === "demo-user") {
+    showError(sessionStorage.getItem("isDemo") === "true"
+        ? "Риболовля поки недоступна в демо-режимі. Увійди через посилання з Minecraft."
+        : "Для риболовлі потрібно увійти через Minecraft.");
+} else {
     loadState();
-});
+}
