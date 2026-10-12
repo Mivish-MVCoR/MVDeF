@@ -248,8 +248,9 @@
     </main>
 
     <script type="module">
-        import { db } from './js/firebase.js';
+        import { db, auth } from './js/firebase.js';
         import { ref, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import './js/moderator-shortcut.js';
 
         const uuid = sessionStorage.getItem('uuid');
@@ -258,11 +259,6 @@
         if (!uuid) { window.location.href = 'login.html'; }
 
         document.getElementById('greetingName').textContent = `Вітаємо, ${playerName || 'Гравець'}`;
-
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            sessionStorage.clear();
-            window.location.href = 'login.html';
-        });
 
         let logoClicks = 0;
         const logoEasterEggMessages = {
@@ -275,12 +271,18 @@
 
         const logoButton = document.getElementById('logoButton');
 
-        logoButton.addEventListener('click', () => {
+        logoButton.addEventListener('click', async () => {
             logoEasterEgg.hidden = true;
             logoClicks += 1;
             if (logoClicks === 10) {
-                sessionStorage.clear();
-                window.location.href = 'login.html';
+                try {
+                    await signOut(auth);
+                    sessionStorage.clear();
+                    window.location.href = 'login.html';
+                } catch (error) {
+                    console.error('Не вдалося завершити сеанс Firebase:', error);
+                    window.alert('Не вдалося безпечно завершити сеанс. Перевір підключення та спробуй ще раз.');
+                }
                 return;
             }
 
@@ -420,5 +422,6 @@
             if (Object.keys(updates).length > 0) update(ref(db), updates);
         }
     </script>
+    <script type="module" src="js/logout.js"></script>
 </body>
 </html>

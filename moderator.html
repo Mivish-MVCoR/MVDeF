@@ -329,7 +329,18 @@
             });
         });
 
-        document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+        document.getElementById('logoutBtn').addEventListener('click', async event => {
+            event.preventDefault();
+            try {
+                await signOut(auth);
+                sessionStorage.clear();
+                window.location.replace('login.html');
+            } catch (error) {
+                console.error('Не вдалося завершити сеанс модератора:', error);
+                document.getElementById('authStatus').textContent =
+                    'Не вдалося безпечно завершити сеанс. Перевір підключення та спробуй ще раз.';
+            }
+        });
 
         document.addEventListener('keydown', event => {
             if (event.key !== 'Shift') return;
@@ -405,6 +416,14 @@
             if (!user) {
                 document.getElementById('authSection').style.display = 'block';
                 document.getElementById('modPanel').style.display = 'none';
+                return;
+            }
+
+            if (!user.email) {
+                document.getElementById('authSection').style.display = 'block';
+                document.getElementById('modPanel').style.display = 'none';
+                document.getElementById('authStatus').textContent = 'Для модераторської панелі увійди через Google.';
+                await signOut(auth);
                 return;
             }
 

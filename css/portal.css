@@ -660,6 +660,39 @@ body:has(#mapCanvas) .navbar {
     touch-action: none;
 }
 
+.map-zoom-controls {
+    position: absolute;
+    z-index: 2;
+    top: 14px;
+    left: 14px;
+    display: grid;
+    gap: 6px;
+}
+
+.map-zoom-controls button {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: rgba(13, 19, 16, 0.94);
+    color: var(--green);
+    font: 700 1.4rem/1 "Segoe UI", sans-serif;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.map-zoom-controls button:hover {
+    border-color: var(--green);
+    background: rgba(129, 200, 120, 0.14);
+}
+
+.map-zoom-controls button:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+}
+
 .map-sidebar {
     display: flex;
     flex: 0 0 320px;

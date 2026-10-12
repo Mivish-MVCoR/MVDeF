@@ -4,12 +4,6 @@ import { ref, get, onValue, set, update } from 'https://www.gstatic.com/firebase
 const uuid = sessionStorage.getItem('uuid');
 if (!uuid) window.location.href = 'login.html';
 
-document.getElementById('logoutBtn').addEventListener('click', event => {
-    event.preventDefault();
-    sessionStorage.clear();
-    window.location.href = 'login.html';
-});
-
 const defaultRoles = {
     passerby: { name: 'Прохожий', builtIn: true, permissions: { fightMobs: true } },
     builder: { name: 'Будівельник', builtIn: true, permissions: { breakBlocks: true, placeBlocks: true } },

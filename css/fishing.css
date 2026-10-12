@@ -14,6 +14,41 @@
     margin-bottom: 24px;
 }
 
+.fishing-profile-chip {
+    display: grid;
+    min-width: 148px;
+    gap: 5px;
+    padding: 11px 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: rgba(129, 200, 120, 0.07);
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-align: right;
+}
+
+.fishing-profile-chip strong {
+    color: var(--green);
+    font-size: 0.9rem;
+}
+
+.fishing-notice,
+.fishing-error {
+    margin-bottom: 16px;
+    padding: 11px 14px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: rgba(129, 200, 120, 0.08);
+    color: var(--text);
+    font-size: 0.82rem;
+}
+
+.fishing-error {
+    border-color: rgba(237, 119, 119, 0.45);
+    background: rgba(237, 119, 119, 0.08);
+    color: #e98b8b;
+}
+
 .fishing-page-heading h1 {
     margin: 3px 0 6px;
 }
@@ -53,6 +88,30 @@
 
 .fishing-card-heading {
     margin-bottom: 16px;
+}
+
+.fishing-venue-select {
+    max-width: 260px;
+    min-height: 40px;
+    padding: 6px 34px 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--surface, #121b16);
+    color: var(--text);
+    font: inherit;
+    font-size: 1.08rem;
+    font-weight: 700;
+}
+
+.fishing-world-state {
+    display: grid;
+    justify-items: end;
+    gap: 6px;
+}
+
+.fishing-time {
+    color: var(--muted);
+    font-size: 0.72rem;
 }
 
 .fishing-card-heading .card-label {
@@ -171,6 +230,30 @@
     background: #fff;
 }
 
+.fishing-scene[data-stage="waiting"] .fishing-float {
+    animation: float-bob 1.6s ease-in-out infinite;
+}
+
+.fishing-scene[data-stage="hook"] .fishing-float {
+    animation: float-bite 0.2s linear infinite alternate;
+}
+
+.fishing-scene[data-stage="fight"] .fishing-float {
+    animation: float-fight 0.75s ease-in-out infinite alternate;
+}
+
+@keyframes float-bob {
+    50% { transform: translateY(8px); }
+}
+
+@keyframes float-bite {
+    to { transform: translateY(11px) rotate(7deg); }
+}
+
+@keyframes float-fight {
+    to { transform: translate(-16px, 5px); }
+}
+
 .scene-caption {
     position: absolute;
     z-index: 2;
@@ -192,6 +275,34 @@
     color: var(--muted);
     font-size: 0.78rem;
     line-height: 1.5;
+}
+
+.fishing-secondary-button {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--text);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+.fishing-secondary-button:hover:not(:disabled) {
+    border-color: var(--green);
+    background: rgba(129, 200, 120, 0.1);
+}
+
+.fishing-secondary-button:disabled,
+.fishing-item-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
 }
 
 .fishing-cast-button {
@@ -279,7 +390,7 @@
 }
 
 .catch-card,
-.market-card {
+.collection-card {
     min-height: 235px;
 }
 
@@ -287,34 +398,278 @@
     white-space: nowrap;
 }
 
-.fishing-empty-state {
-    display: grid;
-    min-height: 144px;
-    place-content: center;
-    justify-items: center;
-    gap: 8px;
-    border: 1px dashed var(--line);
-    border-radius: 6px;
+.equipment-condition {
     color: var(--muted);
+    font-size: 0.66rem;
+    white-space: nowrap;
+}
+
+.equipment-condition-low { color: #e7a95d; }
+
+.equipment-shop {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+}
+
+.equipment-shop[hidden] {
+    display: none;
+}
+
+.equipment-shop label,
+.bait-shop-row > label {
+    color: var(--text);
+    font-size: 0.75rem;
+    font-weight: 650;
+}
+
+.fishing-shop-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fishing-shop-row select,
+.fishing-shop-row input {
+    min-width: 0;
+    min-height: 36px;
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface, #121b16);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.72rem;
+}
+
+.equipment-shop select { flex: 1 1 auto; }
+
+.equipment-shop small {
+    color: var(--muted);
+    font-size: 0.66rem;
+    line-height: 1.45;
+}
+
+.bait-shop-row {
+    display: grid;
+    grid-template-columns: 1fr auto 76px auto;
+    margin-top: 12px;
+}
+
+.bait-shop-row > label { grid-column: 1 / -1; }
+
+.fishing-game-panel {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: rgba(129, 200, 120, 0.045);
+}
+
+.fishing-game-panel[hidden],
+.fishing-result-panel[hidden] {
+    display: none;
+}
+
+.fishing-state-row,
+.fight-meter-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.fishing-state-row strong,
+.fishing-hook-panel strong {
+    color: var(--text);
+    font-size: 0.92rem;
+}
+
+.fishing-countdown,
+.fishing-state-row > span:last-child {
+    color: var(--green);
+    font-family: Consolas, monospace;
+    font-size: 0.85rem;
+}
+
+.fishing-stage-description,
+.fishing-game-panel p,
+.fishing-fight-help {
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1.5;
+}
+
+.fishing-hook-panel {
+    position: relative;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    overflow: hidden;
+}
+
+.fishing-hook-panel p { margin-top: 4px; }
+
+.hook-timer {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    transform-origin: left center;
+    background: #e2bd60;
+}
+
+.fishing-fight-actions {
+    display: flex;
+    gap: 9px;
+}
+
+.fishing-fight-actions button { flex: 1 1 0; }
+
+.fishing-reel-button[aria-pressed="true"] {
+    border-color: #e2bd60;
+    background: rgba(226, 189, 96, 0.14);
+}
+
+.fight-meter-group {
+    display: grid;
+    gap: 7px;
+}
+
+.fight-meter-heading {
+    color: var(--muted);
+    font-size: 0.74rem;
+}
+
+.fight-meter-heading output { color: var(--text); }
+
+.tension-range {
+    width: 100%;
+    accent-color: #82c875;
+}
+
+.tension-zones {
+    display: grid;
+    grid-template-columns: 60fr 25fr 15fr;
+    gap: 4px;
+    font-size: 0.63rem;
     text-align: center;
 }
 
-.fishing-empty-state > span {
-    font-size: 1.5rem;
-    opacity: 0.75;
+.tension-zones span:first-child { color: #83c875; }
+.tension-zones span:nth-child(2) { color: #e2bd60; }
+.tension-zones span:last-child { color: #e67c7c; }
+
+.fishing-progress {
+    width: 100%;
+    height: 9px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    accent-color: #79bb70;
 }
 
-.fishing-empty-state p {
+.fishing-progress::-webkit-progress-bar {
+    border-radius: inherit;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.fishing-progress::-webkit-progress-value {
+    border-radius: inherit;
+    background: #79bb70;
+}
+
+.fishing-result-panel {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid rgba(129, 200, 120, 0.34);
+    border-radius: 6px;
+    background: rgba(129, 200, 120, 0.08);
+}
+
+.fishing-result-panel strong {
+    color: var(--green);
+    font-size: 0.9rem;
+}
+
+.fishing-result-panel p {
+    margin-top: 5px;
     color: var(--text);
-    font-size: 0.82rem;
+    font-size: 0.76rem;
+    line-height: 1.5;
 }
 
-.fishing-empty-state small {
-    font-size: 0.7rem;
+.inventory-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
 }
 
-.market-preview > div:last-child {
-    border-bottom: 1px solid var(--line);
+.fish-inventory {
+    display: grid;
+    gap: 8px;
+    max-height: 420px;
+    overflow: auto;
+}
+
+.fish-specimen {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.fish-specimen-info {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+.fish-specimen-info strong {
+    color: var(--text);
+    font-size: 0.76rem;
+}
+
+.fish-specimen-info small,
+.fishing-list-empty {
+    color: var(--muted);
+    font-size: 0.66rem;
+}
+
+.fish-specimen-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+}
+
+.fishing-item-button {
+    min-height: 32px;
+    padding: 5px 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.65rem;
+}
+
+.fishing-item-button:hover:not(:disabled) {
+    border-color: var(--green);
+}
+
+.fishing-list-empty {
+    padding: 16px 4px;
+    text-align: center;
 }
 
 html[data-theme="light"] .fishing-scene {
@@ -340,6 +695,17 @@ html[data-theme="light"] .equipment-icon {
     background: rgba(56, 135, 71, 0.07);
 }
 
+html[data-theme="light"] .fishing-venue-select,
+html[data-theme="light"] .fishing-shop-row select,
+html[data-theme="light"] .fishing-shop-row input {
+    background: #fff;
+}
+
+html[data-theme="light"] .fishing-secondary-button,
+html[data-theme="light"] .fishing-item-button {
+    background: rgba(35, 77, 41, 0.035);
+}
+
 @media (max-width: 760px) {
     .fishing-layout {
         grid-template-columns: minmax(0, 1fr);
@@ -359,6 +725,14 @@ html[data-theme="light"] .equipment-icon {
         align-items: flex-start;
     }
 
+    .fishing-profile-chip {
+        min-width: 116px;
+        padding: 8px;
+        font-size: 0.65rem;
+    }
+
+    .fishing-profile-chip strong { font-size: 0.75rem; }
+
     .fishing-side-panels {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -375,4 +749,23 @@ html[data-theme="light"] .equipment-icon {
     .fishing-cast-button {
         width: 100%;
     }
+
+    .fishing-shop-row {
+        flex-wrap: wrap;
+    }
+
+    .equipment-shop .fishing-shop-row select {
+        flex-basis: 100%;
+    }
+
+    .fish-specimen {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .fish-specimen-actions {
+        width: 100%;
+    }
+
+    .fish-specimen-actions button { flex: 1 1 auto; }
 }

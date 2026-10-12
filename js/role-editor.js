@@ -4,12 +4,6 @@ import { ref, get, push, set } from 'https://www.gstatic.com/firebasejs/10.7.1/f
 const uuid = sessionStorage.getItem('uuid');
 if (!uuid) window.location.href = 'login.html';
 
-document.getElementById('logoutBtn').addEventListener('click', event => {
-    event.preventDefault();
-    sessionStorage.clear();
-    window.location.href = 'login.html';
-});
-
 const roleId = new URLSearchParams(location.search).get('role');
 const nameInput = document.getElementById('roleName');
 const form = document.getElementById('roleEditor');

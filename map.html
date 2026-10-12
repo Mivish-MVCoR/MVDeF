@@ -166,6 +166,11 @@
         <section id="mapContainer" aria-label="Інтерактивна карта чанків">
             <canvas id="mapCanvas"></canvas>
 
+            <div class="map-zoom-controls" role="group" aria-label="Масштаб карти">
+                <button id="zoomInBtn" type="button" aria-label="Збільшити карту" title="Збільшити">+</button>
+                <button id="zoomOutBtn" type="button" aria-label="Зменшити карту" title="Зменшити">−</button>
+            </div>
+
             <div class="legend">
                 <div id="empireLegendItems"></div>
                 <div class="legend-item"><div class="legend-dot" style="background:#d1b65e"></div> На модерації</div>
@@ -218,11 +223,6 @@
         const uuid = sessionStorage.getItem('uuid');
         if (!uuid) { window.location.href = 'login.html'; }
 
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            sessionStorage.clear();
-            window.location.href = 'login.html';
-        });
-
         const canvas = document.getElementById('mapCanvas');
         const ctx = canvas.getContext('2d');
         const tooltip = document.getElementById('tooltip');
@@ -249,6 +249,9 @@
         let isDragging = false;
         let hasNavigated = false;
         let dragStart = { x: 0, y: 0 };
+        const activeTouchPointers = new Map();
+        let pinchStart = null;
+        let suppressTouchSelection = false;
 
         const chunks = {};
         const empires = {};
@@ -297,6 +300,33 @@
         function fitMapToView() {
             CHUNK_SIZE = Math.max(2, Math.min(48, Math.floor(Math.min(canvas.width, canvas.height) / WORLD_SIZE)));
             centerMap();
+        }
+
+        function zoomAt(x, y, newSize) {
+            const boundedSize = Math.max(2, Math.min(48, newSize));
+            if (boundedSize === CHUNK_SIZE) return;
+            const scale = boundedSize / CHUNK_SIZE;
+            offsetX = x - (x - offsetX) * scale;
+            offsetY = y - (y - offsetY) * scale;
+            CHUNK_SIZE = boundedSize;
+            hasNavigated = true;
+            draw();
+        }
+
+        function getTouchPair() {
+            return [...activeTouchPointers.values()].slice(0, 2);
+        }
+
+        function getTouchMidpoint(first, second) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (first.x + second.x) / 2 - rect.left,
+                y: (first.y + second.y) / 2 - rect.top
+            };
+        }
+
+        function getTouchDistance(first, second) {
+            return Math.hypot(second.x - first.x, second.y - first.y);
         }
 
         resizeCanvas();
@@ -549,19 +579,39 @@
 
         canvas.addEventListener('wheel', e => {
             e.preventDefault();
-            const delta = e.deltaY > 0 ? -1 : 1;
-            const newSize = Math.max(2, Math.min(48, CHUNK_SIZE + delta));
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
-            offsetX = mouseX - (mouseX - offsetX) * (newSize / CHUNK_SIZE);
-            offsetY = mouseY - (mouseY - offsetY) * (newSize / CHUNK_SIZE);
-            CHUNK_SIZE = newSize;
-            hasNavigated = true;
-            draw();
+            zoomAt(mouseX, mouseY, CHUNK_SIZE + (e.deltaY > 0 ? -1 : 1));
+        });
+
+        document.getElementById('zoomInBtn').addEventListener('click', () => {
+            zoomAt(canvas.width / 2, canvas.height / 2, CHUNK_SIZE * 1.25);
+        });
+
+        document.getElementById('zoomOutBtn').addEventListener('click', () => {
+            zoomAt(canvas.width / 2, canvas.height / 2, CHUNK_SIZE / 1.25);
         });
 
         canvas.addEventListener('pointerdown', e => {
+            if (e.pointerType === 'touch') {
+                activeTouchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                canvas.setPointerCapture(e.pointerId);
+                if (activeTouchPointers.size === 2) {
+                    const [first, second] = getTouchPair();
+                    const midpoint = getTouchMidpoint(first, second);
+                    pinchStart = {
+                        distance: getTouchDistance(first, second),
+                        chunkSize: CHUNK_SIZE,
+                        worldX: (midpoint.x - offsetX) / CHUNK_SIZE,
+                        worldY: (midpoint.y - offsetY) / CHUNK_SIZE
+                    };
+                    suppressTouchSelection = true;
+                    isPointerDown = false;
+                    isDragging = true;
+                }
+                if (activeTouchPointers.size > 1) return;
+            }
             isPointerDown = true;
             isDragging = false;
             dragStart = { x: e.clientX - offsetX, y: e.clientY - offsetY };
@@ -570,6 +620,24 @@
         });
 
         canvas.addEventListener('pointermove', e => {
+            if (e.pointerType === 'touch' && activeTouchPointers.has(e.pointerId)) {
+                activeTouchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                if (pinchStart && activeTouchPointers.size >= 2) {
+                    const [first, second] = getTouchPair();
+                    const midpoint = getTouchMidpoint(first, second);
+                    const distance = getTouchDistance(first, second);
+                    const newSize = Math.max(
+                        2,
+                        Math.min(48, pinchStart.chunkSize * distance / pinchStart.distance)
+                    );
+                    CHUNK_SIZE = newSize;
+                    offsetX = midpoint.x - pinchStart.worldX * newSize;
+                    offsetY = midpoint.y - pinchStart.worldY * newSize;
+                    hasNavigated = true;
+                    draw();
+                    return;
+                }
+            }
             if (isPointerDown) {
                 const newOffX = e.clientX - dragStart.x;
                 const newOffY = e.clientY - dragStart.y;
@@ -629,6 +697,19 @@
         });
 
         canvas.addEventListener('pointerup', e => {
+            if (e.pointerType === 'touch') {
+                activeTouchPointers.delete(e.pointerId);
+                if (suppressTouchSelection) {
+                    if (activeTouchPointers.size === 0) {
+                        suppressTouchSelection = false;
+                        pinchStart = null;
+                        isPointerDown = false;
+                        isDragging = false;
+                        canvas.style.cursor = 'crosshair';
+                    }
+                    return;
+                }
+            }
             canvas.style.cursor = 'crosshair';
             isPointerDown = false;
             if (isDragging) return;
@@ -653,6 +734,9 @@
         });
 
         canvas.addEventListener('pointercancel', () => {
+            activeTouchPointers.clear();
+            pinchStart = null;
+            suppressTouchSelection = false;
             isPointerDown = false;
             isDragging = false;
             canvas.style.cursor = 'crosshair';
@@ -712,5 +796,6 @@
 
         loadData();
     </script>
+    <script type="module" src="js/logout.js"></script>
 </body>
 </html>

@@ -24,8 +24,9 @@
         </div>
     </div>
     <script type="module">
-        import { db } from './js/firebase.js';
-        import { ref, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { auth } from './js/firebase.js';
+        import { signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
         import './js/moderator-shortcut.js';
 
         let demoLogoClicks = 0;
@@ -39,14 +40,21 @@
             9: 'Ще 1 клік до ДЕМО...'
         };
 
-        document.getElementById('demoLogo').addEventListener('click', () => {
+        document.getElementById('demoLogo').addEventListener('click', async () => {
             demoLogoClicks += 1;
             demoToast.hidden = true;
             if (demoLogoClicks === 10) {
-                sessionStorage.setItem('uuid', 'demo-user');
-                sessionStorage.setItem('playerName', 'Demo');
-                sessionStorage.setItem('isDemo', 'true');
-                window.location.href = 'cabinet.html';
+                try {
+                    await signOut(auth);
+                    sessionStorage.setItem('uuid', 'demo-user');
+                    sessionStorage.setItem('playerName', 'Demo');
+                    sessionStorage.setItem('isDemo', 'true');
+                    window.location.href = 'cabinet.html';
+                } catch (error) {
+                    console.error('Не вдалося завершити попередній сеанс перед входом у демо:', error);
+                    status.textContent = 'Не вдалося перейти в демо. Спробуй ще раз.';
+                    status.className = 'status error';
+                }
                 return;
             }
 
@@ -80,32 +88,24 @@
             status.textContent = 'Перевіряємо токен...';
             status.className = 'status info';
 
-            const tokenRef = ref(db, `mvdef/tokens/${token}`);
-            get(tokenRef).then(snapshot => {
-                if (!snapshot.exists()) {
-                    status.textContent = 'Токен недійсний або прострочений.';
+            const exchangeToken = httpsCallable(getFunctions(undefined, 'europe-west1'), 'exchangeLoginToken');
+            exchangeToken({ token })
+                .then(async result => {
+                    const { customToken, playerName } = result.data;
+                    const credential = await signInWithCustomToken(auth, customToken);
+                    sessionStorage.setItem('uuid', credential.user.uid);
+                    sessionStorage.setItem('playerName', playerName);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    window.location.href = 'cabinet.html';
+                })
+                .catch(error => {
+                    console.error('Помилка безпечного входу:', error);
+                    status.textContent = error.code === 'functions/unauthenticated' ||
+                        error.code === 'functions/invalid-argument'
+                        ? 'Токен недійсний, прострочений або вже використаний. Введи //empire на сервері ще раз.'
+                        : 'Не вдалося підключитися для входу. Спробуй ще раз пізніше.';
                     status.className = 'status error';
-                    return;
-                }
-
-                const data = snapshot.val();
-                const now = Math.floor(Date.now() / 1000);
-
-                if (data.expiresAt && data.expiresAt < now) {
-                    status.textContent = 'Токен прострочений. Введи //empire ще раз.';
-                    status.className = 'status error';
-                    remove(tokenRef);
-                    return;
-                }
-
-                sessionStorage.setItem('uuid', data.uuid);
-                sessionStorage.setItem('playerName', data.playerName);
-                remove(tokenRef);
-                window.location.href = 'cabinet.html';
-            }).catch(err => {
-                status.textContent = 'Помилка підключення до бази даних.';
-                status.className = 'status error';
-            });
+                });
         }
     </script>
 </body>

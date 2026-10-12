@@ -6,12 +6,6 @@ const playerName = sessionStorage.getItem('playerName') || 'Гравець';
 const mode = document.body.dataset.empireMode;
 if (!uuid) window.location.href = 'login.html';
 
-document.getElementById('logoutBtn').addEventListener('click', event => {
-    event.preventDefault();
-    sessionStorage.clear();
-    window.location.href = 'login.html';
-});
-
 const governmentInfo = {
     monarchy: ['Монархія', 'Влада однієї особи (короля, царя, імператора), яка найчастіше передається у спадок.'],
     republic: ['Республіка', 'Влада виборних органів та правителів, яких народ чи еліта обирає на певний термін.'],
