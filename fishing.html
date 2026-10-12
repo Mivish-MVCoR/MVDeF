@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Риболовля</title>
+    <link rel="stylesheet" href="css/portal.css">
+    <link rel="stylesheet" href="css/fishing.css">
+    <script src="js/theme.js" defer></script>
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo-area">
+            <a class="logo" href="cabinet.html" aria-label="MVDeF — кабінет">
+                <img class="logo-mark" src="assets/mvdef-mark.svg" alt="">
+                <span class="logo-word">MVDeF</span>
+            </a>
+        </div>
+        <nav>
+            <a href="cabinet.html">Кабінет</a>
+            <a href="map.html">Карта</a>
+            <a href="fishing.html" aria-current="page">Риболовля</a>
+            <a href="#" id="logoutBtn">Вийти</a>
+        </nav>
+    </header>
+
+    <main class="container fishing-page">
+        <header class="page-title fishing-page-heading">
+            <div>
+                <p class="section-label">МІНІГРА</p>
+                <h1>Риболовля</h1>
+                <p>Твій тихий куточок для майбутніх пригод.</p>
+            </div>
+            <span class="fishing-status">ЗАГОТОВКА</span>
+        </header>
+
+        <div class="fishing-layout">
+            <section class="card fishing-scene-card" aria-labelledby="fishingSpotTitle">
+                <div class="fishing-card-heading">
+                    <div>
+                        <p class="card-label">ЛОКАЦІЯ</p>
+                        <h2 id="fishingSpotTitle">Тихе озеро</h2>
+                    </div>
+                    <span class="fishing-weather" aria-label="Погода: ясно">☀ <span>Ясно</span></span>
+                </div>
+                <div class="fishing-scene" role="img" aria-label="Ілюстрація озера з поплавком">
+                    <div class="fishing-sun"></div>
+                    <div class="fishing-hills fishing-hills-back"></div>
+                    <div class="fishing-hills fishing-hills-front"></div>
+                    <div class="fishing-water">
+                        <span class="water-ripple ripple-one"></span>
+                        <span class="water-ripple ripple-two"></span>
+                        <span class="water-ripple ripple-three"></span>
+                    </div>
+                    <div class="fishing-float" aria-hidden="true"><span></span></div>
+                    <span class="scene-caption">Тут почнеться твоя риболовля</span>
+                </div>
+                <div class="fishing-action-row">
+                    <p>Ігрова механіка з'явиться на наступному етапі.</p>
+                    <button class="btn-map fishing-cast-button" type="button" disabled>Закинути вудку</button>
+                </div>
+            </section>
+
+            <aside class="fishing-side-panels">
+                <section class="card equipment-card" aria-labelledby="equipmentTitle">
+                    <div class="fishing-card-heading">
+                        <div>
+                            <p class="card-label">ПІДГОТОВКА</p>
+                            <h2 id="equipmentTitle">Спорядження</h2>
+                        </div>
+                        <span class="coming-soon-badge">СКОРО</span>
+                    </div>
+                    <div class="equipment-list">
+                        <div class="equipment-row">
+                            <span class="equipment-icon" aria-hidden="true">🎣</span>
+                            <span><strong>Вудка</strong><small>Ще не вибрана</small></span>
+                            <span class="equipment-slot">Слот 1</span>
+                        </div>
+                        <div class="equipment-row">
+                            <span class="equipment-icon" aria-hidden="true">🪱</span>
+                            <span><strong>Наживка</strong><small>Ще не вибрана</small></span>
+                            <span class="equipment-slot">Слот 2</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card fishing-stats-card" aria-labelledby="fishingStatsTitle">
+                    <div class="fishing-card-heading">
+                        <div>
+                            <p class="card-label">ТВІЙ ПРОГРЕС</p>
+                            <h2 id="fishingStatsTitle">Статистика</h2>
+                        </div>
+                    </div>
+                    <div class="fishing-stats">
+                        <div><span>Усього виловлено</span><strong>—</strong></div>
+                        <div><span>Найкращий улов</span><strong>—</strong></div>
+                        <div><span>Рівень рибалки</span><strong>—</strong></div>
+                    </div>
+                </section>
+            </aside>
+
+            <section class="card catch-card" aria-labelledby="catchTitle">
+                <div class="fishing-card-heading">
+                    <div>
+                        <p class="card-label">ТВІЙ ІНВЕНТАР</p>
+                        <h2 id="catchTitle">Улов</h2>
+                    </div>
+                    <span class="catch-count">0 предметів</span>
+                </div>
+                <div class="fishing-empty-state">
+                    <span aria-hidden="true">🐟</span>
+                    <p>Тут з'являтиметься спіймана риба.</p>
+                    <small>Закидай вудку, щоб поповнити інвентар.</small>
+                </div>
+            </section>
+
+            <section class="card market-card" aria-labelledby="marketTitle">
+                <div class="fishing-card-heading">
+                    <div>
+                        <p class="card-label">ОБМІН І ПОКУПКИ</p>
+                        <h2 id="marketTitle">Рибальський ринок</h2>
+                    </div>
+                    <span class="coming-soon-badge">СКОРО</span>
+                </div>
+                <div class="market-preview">
+                    <div><span>Продаж улову</span><strong>Невдовзі</strong></div>
+                    <div><span>Вудки та наживки</span><strong>Невдовзі</strong></div>
+                    <div><span>Монети</span><strong>—</strong></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        if (!sessionStorage.getItem('uuid')) {
+            window.location.replace('login.html');
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', event => {
+            event.preventDefault();
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>
