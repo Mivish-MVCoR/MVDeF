@@ -361,12 +361,29 @@
                 </div>
             `;
         } else {
-            empireContent.innerHTML = `
-                <p class="empty">У вас немає імперії.</p>
-                <p class="sub" style="margin-top:8px">Створи правління, налаштуй його та подай заявку на територію.</p>
-            `;
-            document.getElementById('createEmpireLink').hidden = false;
-            statusContent.innerHTML = `<p class="empty">—</p>`;
+            const pendingEmpireRequest = await get(ref(db, `mvdef/empireRequests/${uuid}`));
+            if (pendingEmpireRequest.exists()) {
+                const request = pendingEmpireRequest.val();
+                const organizationNames = {
+                    empire: 'імперії', city: 'міста', village: 'села', country: 'країни'
+                };
+                const organizationName = organizationNames[request.organizationLevel] || 'правління';
+                empireContent.replaceChildren();
+                const pendingName = document.createElement('h2');
+                pendingName.textContent = request.name || 'Нове правління';
+                const pendingDescription = document.createElement('p');
+                pendingDescription.className = 'sub';
+                pendingDescription.textContent = `Заявка на створення ${organizationName} очікує на розгляд модератора.`;
+                empireContent.append(pendingName, pendingDescription);
+                statusContent.innerHTML = '<p class="status-pending">Очікує на розгляд модератора</p>';
+            } else {
+                empireContent.innerHTML = `
+                    <p class="empty">У вас немає імперії.</p>
+                    <p class="sub" style="margin-top:8px">Створи правління та дочекайся підтвердження модератора.</p>
+                `;
+                document.getElementById('createEmpireLink').hidden = false;
+                statusContent.innerHTML = `<p class="empty">—</p>`;
+            }
         }
 
         // Сповіщення

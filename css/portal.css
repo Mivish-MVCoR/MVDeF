@@ -277,6 +277,141 @@ body {
     letter-spacing: 0.08em;
 }
 
+.status-pending {
+    padding: 10px 12px;
+    border: 1px solid rgba(210, 189, 112, 0.35);
+    border-radius: 4px;
+    background: rgba(210, 189, 112, 0.08);
+    color: #d2bd70;
+    font-size: 0.84rem;
+}
+
+.danger-zone {
+    margin-top: 30px;
+}
+
+.danger-zone-frame {
+    padding: 20px;
+    border: 1px solid rgba(237, 89, 89, 0.75);
+    border-radius: 8px;
+    background: rgba(84, 20, 20, 0.12);
+}
+
+.danger-zone h2 {
+    margin-top: 8px;
+    color: #ed7777;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.danger-zone-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.danger-zone-button {
+    min-height: 48px;
+    padding: 10px 16px;
+    border: 1px solid rgba(255, 166, 77, 0.55);
+    border-radius: 5px;
+    background: rgba(176, 93, 29, 0.12);
+    color: #ffad5c;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.danger-zone-button:hover {
+    background: rgba(176, 93, 29, 0.22);
+}
+
+.danger-zone-button-delete {
+    border-color: rgba(237, 89, 89, 0.7);
+    background: rgba(140, 31, 31, 0.18);
+    color: #ed7777;
+}
+
+.danger-zone-button-delete:hover {
+    background: rgba(140, 31, 31, 0.3);
+}
+
+.delete-empire-dialog {
+    width: min(520px, calc(100vw - 32px));
+    padding: 0;
+    border: 1px solid #ed5959;
+    border-radius: 12px;
+    background: #101311;
+    color: var(--text);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75);
+}
+
+.delete-empire-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(4px);
+}
+
+.delete-empire-card {
+    display: grid;
+    gap: 16px;
+    padding: 26px;
+}
+
+.delete-empire-card h2 {
+    color: #f08b8b;
+    font-size: 1.2rem;
+}
+
+.delete-empire-card p {
+    color: #d0d6d1;
+    line-height: 1.55;
+}
+
+.delete-empire-card .delete-empire-error {
+    color: #ff8585;
+}
+
+.delete-empire-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.delete-empire-actions button {
+    min-height: 46px;
+    padding: 9px 12px;
+    border-radius: 5px;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.delete-empire-cancel {
+    border: 1px solid #777f79;
+    color: #b5bcb7;
+}
+
+.delete-empire-confirm {
+    border: 1px solid #ed5959;
+    background: #542c16 !important;
+    color: #ff7777;
+}
+
+.delete-empire-actions button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+@media (max-width: 520px) {
+    .delete-empire-card {
+        padding: 18px;
+    }
+}
+
 .status-online::before {
     box-shadow: 0 0 10px rgba(129, 200, 120, 0.8);
 }

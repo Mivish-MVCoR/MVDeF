@@ -1,5 +1,5 @@
 import { db } from './firebase.js';
-import { ref, get, push, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { ref, get, push, set, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 const uuid = sessionStorage.getItem('uuid');
 const playerName = sessionStorage.getItem('playerName') || 'Гравець';
@@ -36,6 +36,31 @@ const colorValue = document.getElementById('colorValue');
 const errorBox = document.getElementById('formError');
 let avatarData = null;
 let existingEmpireId = null;
+let hasPendingCreationRequest = false;
+let currentEmpire = null;
+
+const organizationLevelDetails = {
+    empire: {
+        button: 'Покинути престол',
+        title: 'Ви точно хочете покинути престол?',
+        confirm: 'Я покидаю престол (це повністю видалить вашу імперію)'
+    },
+    city: {
+        button: 'Зректися посади',
+        title: 'Ви точно хочете зректися посади?',
+        confirm: 'Я зрікаюся влади (це повністю видалить ваше місто)'
+    },
+    village: {
+        button: 'Зректися посади',
+        title: 'Ви точно хочете зректися посади?',
+        confirm: 'Я зрікаюся влади (це повністю видалить ваше село)'
+    },
+    country: {
+        button: 'Зректися посади',
+        title: 'Ви точно хочете зректися посади?',
+        confirm: 'Я зрікаюся влади (це повністю видалить вашу країну)'
+    }
+};
 
 function showGovernmentInfo() {
     const [title, description] = governmentInfo[document.getElementById('government').value];
@@ -74,7 +99,11 @@ function renderPresets() {
 }
 
 async function loadEmpire() {
-    const snapshot = await get(ref(db, 'mvdef/empires'));
+    const [snapshot, pendingRequestSnapshot] = await Promise.all([
+        get(ref(db, 'mvdef/empires')),
+        get(ref(db, `mvdef/empireRequests/${uuid}`))
+    ]);
+    hasPendingCreationRequest = pendingRequestSnapshot.exists();
     snapshot.forEach(child => {
         if (child.val()?.ownerUuid === uuid) {
             existingEmpireId = child.key;
@@ -84,24 +113,29 @@ async function loadEmpire() {
         window.location.replace('empire-edit.html');
         return;
     }
+    if (mode === 'create' && hasPendingCreationRequest) {
+        window.location.replace('cabinet.html');
+        return;
+    }
     if (mode === 'edit' && !existingEmpireId) {
         window.location.replace('empire-create.html');
         return;
     }
 
     if (mode === 'create') {
-        const noun = ({ empire: 'Імперією', city: 'Містом', village: 'Селом', country: 'Країною' })[
+        const noun = ({ empire: 'імперії', city: 'міста', village: 'села', country: 'країни' })[
             document.getElementById('organizationLevel').value
         ];
         document.getElementById('welcomeText').textContent =
-            `Ви, ${playerName}, з цього моменту починаєте керувати ${noun}. Ви можете призначити собі підопічних, видавши їм ролі, та вибрати території, які з'являться у вас після модерації.`;
+            `Ви, ${playerName}, подаєте заявку на створення ${noun}. Після підтвердження модератором зможете керувати правлінням, призначати підопічних і подавати заявки на території.`;
         document.getElementById('organizationLevel').addEventListener('change', event => {
-            const levelNoun = ({ empire: 'Імперією', city: 'Містом', village: 'Селом', country: 'Країною' })[event.target.value];
+            const levelNoun = ({ empire: 'імперії', city: 'міста', village: 'села', country: 'країни' })[event.target.value];
             document.getElementById('welcomeText').textContent =
-                `Ви, ${playerName}, з цього моменту починаєте керувати ${levelNoun}. Ви можете призначити собі підопічних, видавши їм ролі, та вибрати території, які з'являться у вас після модерації.`;
+                `Ви, ${playerName}, подаєте заявку на створення ${levelNoun}. Після підтвердження модератором зможете керувати правлінням, призначати підопічних і подавати заявки на території.`;
         });
     } else {
         const empire = snapshot.child(existingEmpireId).val();
+        currentEmpire = empire;
         document.getElementById('empireNameInput').value = empire.name || '';
         document.getElementById('empireDescription').value = empire.description || '';
         document.getElementById('organizationLevel').value = empire.organizationLevel || 'empire';
@@ -109,12 +143,81 @@ async function loadEmpire() {
         colorInput.value = /^#[0-9a-f]{6}$/i.test(empire.color || '') ? empire.color : '#81c878';
         colorValue.textContent = colorInput.value.toUpperCase();
         setAvatar(empire.avatar || null);
+        configureDangerZone(empire.organizationLevel || 'empire');
     }
     showGovernmentInfo();
     saveButton.disabled = false;
 }
 
+function configureDangerZone(level) {
+    const details = organizationLevelDetails[level] || organizationLevelDetails.empire;
+    const abdicateButton = document.getElementById('abdicateButton');
+    abdicateButton.textContent = details.button;
+    abdicateButton.hidden = level !== 'empire';
+    document.getElementById('capitulateButton').hidden = level === 'empire';
+}
+
+function openDeleteConfirmation() {
+    const level = currentEmpire?.organizationLevel || 'empire';
+    const details = organizationLevelDetails[level] || organizationLevelDetails.empire;
+    document.getElementById('deleteEmpireTitle').textContent = details.title;
+    document.getElementById('deleteEmpireWarning').textContent =
+        `Правління «${currentEmpire?.name || 'Без назви'}», усі його ролі та території буде видалено без можливості відновлення.`;
+    document.getElementById('deleteEmpireError').textContent = '';
+    document.getElementById('confirmDeleteEmpire').textContent = details.confirm;
+    document.getElementById('deleteEmpireDialog').showModal();
+}
+
+async function deleteEmpire() {
+    if (!existingEmpireId || !currentEmpire) {
+        document.getElementById('deleteEmpireError').textContent = 'Не вдалося визначити правління для видалення.';
+        return;
+    }
+
+    const confirmButton = document.getElementById('confirmDeleteEmpire');
+    confirmButton.disabled = true;
+    document.getElementById('cancelDeleteEmpire').disabled = true;
+    document.getElementById('deleteEmpireError').textContent = '';
+
+    try {
+        const chunksSnapshot = await get(ref(db, 'mvdef/chunks'));
+        const updates = {
+            [`mvdef/empires/${existingEmpireId}`]: null,
+            [`mvdef/empireRoles/${existingEmpireId}`]: null,
+            [`mvdef/empireRequests/${uuid}`]: null
+        };
+        chunksSnapshot.forEach(child => {
+            if (child.val()?.empireId === existingEmpireId) {
+                updates[`mvdef/chunks/${child.key}`] = null;
+            }
+        });
+        await update(ref(db), updates);
+        window.location.replace('cabinet.html');
+    } catch (error) {
+        console.error('Не вдалося повністю видалити правління:', error);
+        document.getElementById('deleteEmpireError').textContent =
+            `Не вдалося видалити правління: ${error instanceof Error ? error.message : 'помилка бази даних'}`;
+        confirmButton.disabled = false;
+        document.getElementById('cancelDeleteEmpire').disabled = false;
+    }
+}
+
 document.getElementById('government').addEventListener('change', showGovernmentInfo);
+document.getElementById('organizationLevel').addEventListener('change', event => {
+    if (mode === 'edit') configureDangerZone(event.target.value);
+});
+if (mode === 'edit') {
+    document.getElementById('abdicateButton').addEventListener('click', openDeleteConfirmation);
+    document.getElementById('capitulateButton').addEventListener('click', openDeleteConfirmation);
+    document.getElementById('cancelDeleteEmpire').addEventListener('click', () => {
+        window.location.replace('cabinet.html');
+    });
+    document.getElementById('confirmDeleteEmpire').addEventListener('click', deleteEmpire);
+    document.getElementById('deleteEmpireDialog').addEventListener('cancel', event => {
+        event.preventDefault();
+        window.location.replace('cabinet.html');
+    });
+}
 colorInput.addEventListener('input', () => {
     colorValue.textContent = colorInput.value.toUpperCase();
 });
@@ -170,18 +273,22 @@ form.addEventListener('submit', async event => {
             updatedAt: Date.now()
         };
         if (mode === 'create') {
-            const keyRef = push(ref(db, 'mvdef/empires'));
-            await update(ref(db), {
-                [`mvdef/empires/${keyRef.key}`]: {
-                    ...fields,
-                    ownerUuid: uuid,
-                    ownerName: playerName,
-                    createdAt: Date.now()
-                }
+            if (hasPendingCreationRequest) {
+                showError('Заявка на створення вже очікує на розгляд модератора.');
+                button.disabled = true;
+                return;
+            }
+            await set(ref(db, `mvdef/empireRequests/${uuid}`), {
+                ...fields,
+                ownerUuid: uuid,
+                ownerName: playerName,
+                submittedAt: Date.now()
             });
-            window.location.replace('map.html');
+            window.location.replace('cabinet.html');
         } else {
             await update(ref(db, `mvdef/empires/${existingEmpireId}`), fields);
+            currentEmpire = { ...currentEmpire, ...fields };
+            configureDangerZone(fields.organizationLevel);
             button.textContent = 'Збережено';
             button.disabled = false;
             window.setTimeout(() => { button.textContent = 'Зберегти зміни'; }, 1800);

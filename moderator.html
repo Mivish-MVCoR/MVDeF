@@ -272,7 +272,7 @@
     <main id="modPanel" style="display:none">
         <div class="container">
             <div class="page-title">
-                <h1>Заявки на території</h1>
+                <h1>Заявки на модерацію</h1>
                 <p id="modEmail"></p>
             </div>
             <div class="section-label">Очікують підтвердження</div>
@@ -290,7 +290,7 @@
     <script type="module">
         import { db, auth } from './js/firebase.js';
         import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { ref, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { ref, get, push, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const provider = new GoogleAuthProvider();
         const pendingRequestsById = new Map();
@@ -311,6 +311,16 @@
             toast.style.color = color;
             toast.style.display = 'block';
             setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[character]);
         }
 
         document.getElementById('googleLoginBtn').addEventListener('click', () => {
@@ -375,11 +385,17 @@
             const requestActionButtons = button.closest('.request-actions').querySelectorAll('button');
             requestActionButtons.forEach(actionButton => { actionButton.disabled = true; });
             if (button.dataset.action === 'approve') {
-                if (!await approveRequest(request)) {
+                const succeeded = request.actionType === 'creation'
+                    ? await approveCreationRequest(request)
+                    : await approveRequest(request);
+                if (!succeeded) {
                     requestActionButtons.forEach(actionButton => { actionButton.disabled = false; });
                 }
             } else if (button.dataset.action === 'reject') {
-                if (!await rejectRequest(request)) {
+                const succeeded = request.actionType === 'creation'
+                    ? await rejectCreationRequest(request)
+                    : await rejectRequest(request);
+                if (!succeeded) {
                     requestActionButtons.forEach(actionButton => { actionButton.disabled = false; });
                 }
             }
@@ -404,13 +420,18 @@
             document.getElementById('authSection').style.display = 'none';
             document.getElementById('modPanel').style.display = 'block';
             document.getElementById('modEmail').textContent = user.email;
-            loadPending();
+            loadPending().catch(error => {
+                console.error('Не вдалося завантажити заявки модерації:', error);
+                document.getElementById('pendingList').textContent = 'Не вдалося завантажити заявки модерації.';
+                showToast(`Помилка завантаження заявок: ${error instanceof Error ? error.message : 'невідома помилка'}`, '#ed7777');
+            });
         });
 
         async function loadPending() {
-            const [chunksSnap, empiresSnap] = await Promise.all([
+            const [chunksSnap, empiresSnap, empireRequestsSnap] = await Promise.all([
                 get(ref(db, 'mvdef/chunks')),
-                get(ref(db, 'mvdef/empires'))
+                get(ref(db, 'mvdef/empires')),
+                get(ref(db, 'mvdef/empireRequests'))
             ]);
 
             minimapChunks = {};
@@ -449,29 +470,24 @@
             pendingRequestsById.clear();
             let requestIndex = 0;
 
-            if (Object.keys(pendingByEmpire).length === 0) {
-                list.innerHTML = '<div class="empty">Немає заявок на розгляді.</div>';
-                hideRequestMinimap();
-                return;
-            }
-
-            list.innerHTML = Object.values(pendingByEmpire).map(({ empireId, requestType, keys }) => {
-                const e = empires[empireId];
-                if (!e) return '';
+            const requestCards = Object.values(pendingByEmpire).map(({ empireId, requestType, keys }) => {
+                const empire = empires[empireId];
+                if (!empire) return '';
                 const requestId = `request-${requestIndex++}`;
                 pendingRequestsById.set(requestId, {
+                    actionType: 'territory',
                     empireId,
-                    ownerUuid: e.ownerUuid,
+                    ownerUuid: empire.ownerUuid,
                     keys,
                     requestType,
-                    empireName: e.name
-                });
+                    empireName: empire.name
+                }).filter(Boolean);
                 return `
                     <div class="request-card" data-request-id="${requestId}">
                         <div class="request-info">
-                            <div class="request-empire">⚑ ${e.name}</div>
-                            <div class="request-meta">Гравець: ${e.ownerName}</div>
-                            <div class="request-type">${requestType === 'surrender' ? 'Відмова від території' : 'Розширення імперії'}</div>
+                            <div class="request-empire">⚑ ${escapeHtml(empire.name)}</div>
+                            <div class="request-meta">Гравець: ${escapeHtml(empire.ownerName)}</div>
+                            <div class="request-type">${requestType === 'surrender' ? 'Відмова від території' : 'Розширення території'}</div>
                         </div>
                         <div class="request-chunks">
                             ${keys.length}
@@ -483,7 +499,130 @@
                         </div>
                     </div>
                 `;
-            }).join('');
+            });
+
+            const organizationLabels = {
+                empire: 'Імперія', city: 'Місто', village: 'Село', country: 'Країна'
+            };
+            empireRequestsSnap.forEach(child => {
+                const request = child.val();
+                if (!request || typeof request !== 'object') return;
+                const requestId = `creation-${requestIndex++}`;
+                pendingRequestsById.set(requestId, {
+                    actionType: 'creation',
+                    requestKey: child.key,
+                    request
+                });
+                requestCards.push(`
+                    <div class="request-card" data-request-id="${requestId}">
+                        <div class="request-info">
+                            <div class="request-empire">⚑ ${escapeHtml(request.name || 'Нове правління')}</div>
+                            <div class="request-meta">Гравець: ${escapeHtml(request.ownerName || 'Гравець')}</div>
+                            <div class="request-type">Створення ${escapeHtml(organizationLabels[request.organizationLevel] || 'правління')}</div>
+                            ${request.description ? `<div class="request-meta">${escapeHtml(request.description)}</div>` : ''}
+                        </div>
+                        <div class="request-actions">
+                            <button class="btn-approve" type="button" data-action="approve" data-request-id="${requestId}">✓ Підтвердити</button>
+                            <button class="btn-reject" type="button" data-action="reject" data-request-id="${requestId}">✗ Відхилити</button>
+                        </div>
+                    </div>
+                `);
+            });
+
+            if (requestCards.length === 0) {
+                list.innerHTML = '<div class="empty">Немає заявок на розгляді.</div>';
+                hideRequestMinimap();
+                return;
+            }
+
+            list.innerHTML = requestCards.join('');
+        }
+
+        async function approveCreationRequest({ requestKey, request }) {
+            const ownerUuid = requestKey;
+            const validLevels = ['empire', 'city', 'village', 'country'];
+            if (!String(request.name || '').trim() || !validLevels.includes(request.organizationLevel)) {
+                showToast('Заявка має некоректну назву або рівень організації.', '#ed7777');
+                return false;
+            }
+            try {
+                const empiresSnapshot = await get(ref(db, 'mvdef/empires'));
+                let alreadyHasEmpire = false;
+                empiresSnapshot.forEach(child => {
+                    if (child.val()?.ownerUuid === ownerUuid) alreadyHasEmpire = true;
+                });
+                if (alreadyHasEmpire) {
+                    showToast('У цього гравця вже є правління. Відхиліть застарілу заявку.', '#ed7777');
+                    return false;
+                }
+
+                const empireKey = push(ref(db, 'mvdef/empires')).key;
+                if (!empireKey) throw new Error('Не вдалося створити ID правління.');
+                const now = Date.now();
+                await update(ref(db), {
+                    [`mvdef/empires/${empireKey}`]: {
+                        name: String(request.name || '').trim(),
+                        description: String(request.description || '').trim(),
+                        organizationLevel: request.organizationLevel || 'empire',
+                        government: request.government || 'monarchy',
+                        color: /^#[0-9a-f]{6}$/i.test(request.color || '') ? request.color.toLowerCase() : '#81c878',
+                        avatar: typeof request.avatar === 'string' && request.avatar.startsWith('data:image/jpeg;base64,')
+                            ? request.avatar
+                            : null,
+                        ownerUuid,
+                        ownerName: request.ownerName || 'Гравець',
+                        createdAt: now,
+                        updatedAt: now
+                    },
+                    [`mvdef/empireRequests/${requestKey}`]: null,
+                    [`mvdef/notifications/${ownerUuid}/${now}`]: {
+                        message: '✅ Заявку на створення правління підтверджено. Тепер можна вибирати території на карті.',
+                        read: false,
+                        createdAt: now
+                    }
+                });
+            } catch (error) {
+                console.error('Не вдалося підтвердити створення правління:', error);
+                showToast(`Помилка підтвердження: ${error instanceof Error ? error.message : 'невідома помилка'}`, '#ed7777');
+                return false;
+            }
+
+            showToast('✓ Створення правління підтверджено!');
+            try {
+                await loadPending();
+            } catch (error) {
+                console.error('Не вдалося оновити список заявок:', error);
+                showToast(`Заявку оброблено, але список не оновився: ${error instanceof Error ? error.message : 'невідома помилка'}`, '#ed7777');
+            }
+            return true;
+        }
+
+        async function rejectCreationRequest({ requestKey, request }) {
+            const ownerUuid = requestKey;
+            const now = Date.now();
+            try {
+                await update(ref(db), {
+                    [`mvdef/empireRequests/${requestKey}`]: null,
+                    [`mvdef/notifications/${ownerUuid}/${now}`]: {
+                        message: '❌ Заявку на створення правління відхилено модератором.',
+                        read: false,
+                        createdAt: now
+                    }
+                });
+            } catch (error) {
+                console.error('Не вдалося відхилити створення правління:', error);
+                showToast(`Помилка відхилення: ${error instanceof Error ? error.message : 'невідома помилка'}`, '#ed7777');
+                return false;
+            }
+
+            showToast('Заявку на створення правління відхилено.', '#ed7777');
+            try {
+                await loadPending();
+            } catch (error) {
+                console.error('Не вдалося оновити список заявок:', error);
+                showToast(`Заявку оброблено, але список не оновився: ${error instanceof Error ? error.message : 'невідома помилка'}`, '#ed7777');
+            }
+            return true;
         }
 
         function updateRequestMinimap() {
@@ -494,7 +633,7 @@
 
             const requestId = hoveredRequestCard.dataset.requestId;
             const request = pendingRequestsById.get(requestId);
-            if (!request) {
+            if (!request || request.actionType !== 'territory' || !Array.isArray(request.keys)) {
                 hideRequestMinimap();
                 return;
             }
