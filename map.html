@@ -243,7 +243,10 @@
         const WORLD_MIN = -Math.floor(WORLD_CHUNK_SIZE / 2);
         const WORLD_MAX = WORLD_MIN + WORLD_CHUNK_SIZE;
         const WORLD_SIZE = WORLD_MAX - WORLD_MIN;
-        const WORLD_MAP_ASSET_URL = new URL('./assets/world-map.png', document.baseURI).href;
+        const WORLD_MAP_ASSET_URLS = [
+            new URL('./assets/world-map.png', document.baseURI).href,
+            new URL('../assets/world-map.png', document.baseURI).href
+        ];
 
         let CHUNK_SIZE = 7;
         let offsetX = 0;
@@ -323,6 +326,7 @@
 
         function restoreWorldMap() {
             const image = new Image();
+            let assetIndex = 0;
             image.onload = () => {
                 if (image.naturalWidth !== image.naturalHeight) {
                     showMapToast('Файл assets/world-map.png має бути квадратним.', true);
@@ -331,10 +335,15 @@
                 setWorldMap(image);
             };
             image.onerror = () => {
-                console.error(`Не вдалося завантажити спільну карту: ${WORLD_MAP_ASSET_URL}`);
-                showMapToast('Не знайдено assets/world-map.png. Додайте PNG до файлів сайту.', true);
+                assetIndex += 1;
+                if (assetIndex < WORLD_MAP_ASSET_URLS.length) {
+                    image.src = WORLD_MAP_ASSET_URLS[assetIndex];
+                    return;
+                }
+                console.error(`Не вдалося завантажити спільну карту: ${WORLD_MAP_ASSET_URLS.join(', ')}`);
+                showMapToast('Не знайдено assets/world-map.png у папці сайту або на рівень вище.', true);
             };
-            image.src = WORLD_MAP_ASSET_URL;
+            image.src = WORLD_MAP_ASSET_URLS[assetIndex];
         }
 
         worldMapOpacityInput.addEventListener('input', () => {

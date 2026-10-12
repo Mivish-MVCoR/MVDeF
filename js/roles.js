@@ -259,8 +259,20 @@ async function initialize() {
     });
     worldImage = new Image();
     worldImage.onload = renderMap;
-    worldImage.onerror = () => showMessage('rolesMapMessage', 'Не знайдено спільний файл карти assets/world-map.png.');
-    worldImage.src = new URL('../assets/world-map.png', import.meta.url).href;
+    const mapAssetUrls = [
+        new URL('../assets/world-map.png', import.meta.url).href,
+        new URL('../../assets/world-map.png', import.meta.url).href
+    ];
+    let mapAssetIndex = 0;
+    worldImage.onerror = () => {
+        mapAssetIndex += 1;
+        if (mapAssetIndex < mapAssetUrls.length) {
+            worldImage.src = mapAssetUrls[mapAssetIndex];
+            return;
+        }
+        showMessage('rolesMapMessage', 'Не знайдено спільний файл карти assets/world-map.png у папці сайту або на рівень вище.', true);
+    };
+    worldImage.src = mapAssetUrls[mapAssetIndex];
 }
 
 document.getElementById('assignmentForm').addEventListener('submit', async event => {
