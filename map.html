@@ -165,10 +165,10 @@
             </label>
             <label class="map-opacity-control" for="worldMapScale">
                 <span>Розмір PNG</span>
-                <input id="worldMapScale" type="range" min="100" max="150" value="110" disabled>
+                <input id="worldMapScale" type="range" min="10" max="200" value="110" disabled>
                 <span id="worldMapScaleValue">110%</span>
             </label>
-            <span class="map-image-note">Спільний файл: assets/world-map.png · 1360 × 1360 блоків · центр X:0, Z:0</span>
+            <span class="map-image-note">Спільний файл: assets/world-map.png · 218 × 218 чанків (3488 × 3488 блоків) · центр X:0, Z:0</span>
         </div>
     </div>
 
@@ -238,8 +238,8 @@
         const container = document.getElementById('mapContainer');
 
         const CHUNK_BLOCK_SIZE = 16;
-        const WORLD_BLOCK_SIZE = 1360;
-        const WORLD_CHUNK_SIZE = WORLD_BLOCK_SIZE / CHUNK_BLOCK_SIZE;
+        const WORLD_CHUNK_SIZE = 218;
+        const WORLD_BLOCK_SIZE = WORLD_CHUNK_SIZE * CHUNK_BLOCK_SIZE;
         const WORLD_MIN = -Math.floor(WORLD_CHUNK_SIZE / 2);
         const WORLD_MAX = WORLD_MIN + WORLD_CHUNK_SIZE;
         const WORLD_SIZE = WORLD_MAX - WORLD_MIN;
@@ -304,7 +304,7 @@
         }
 
         function fitMapToView() {
-            CHUNK_SIZE = Math.max(1, Math.min(48, Math.floor(Math.min(canvas.width, canvas.height) / WORLD_SIZE)));
+            CHUNK_SIZE = Math.max(2, Math.min(48, Math.floor(Math.min(canvas.width, canvas.height) / WORLD_SIZE)));
             centerMap();
         }
 
@@ -565,7 +565,7 @@
         canvas.addEventListener('wheel', e => {
             e.preventDefault();
             const delta = e.deltaY > 0 ? -1 : 1;
-            const newSize = Math.max(1, Math.min(48, CHUNK_SIZE + delta));
+            const newSize = Math.max(2, Math.min(48, CHUNK_SIZE + delta));
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;

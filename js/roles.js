@@ -44,6 +44,8 @@ const roles = {};
 const assignments = {};
 const empires = {};
 const chunks = {};
+const WORLD_CHUNK_SIZE = 218;
+const WORLD_MIN = -Math.floor(WORLD_CHUNK_SIZE / 2);
 let empireId = null;
 let empireRolesPath = null;
 let worldImage = null;
@@ -179,13 +181,13 @@ function renderMap() {
     mapContext.fillStyle = '#101713';
     mapContext.fillRect(0, 0, width, height);
     if (worldImage) mapContext.drawImage(worldImage, 0, 0, width, height);
-    const cell = width / 85;
+    const cell = width / WORLD_CHUNK_SIZE;
     Object.entries(chunks).forEach(([key, chunk]) => {
         if (chunk.status !== 'active') return;
         const match = /^world_(-?\d+)_(-?\d+)$/.exec(key);
         if (!match) return;
-        const x = Number(match[1]) + 42;
-        const z = Number(match[2]) + 42;
+        const x = Number(match[1]) - WORLD_MIN;
+        const z = Number(match[2]) - WORLD_MIN;
         const empire = empires[chunk.empireId];
         mapContext.globalAlpha = 0.75;
         mapContext.fillStyle = empire?.color || '#738178';
