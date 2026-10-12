@@ -153,8 +153,8 @@ function configureDangerZone(level) {
     const details = organizationLevelDetails[level] || organizationLevelDetails.empire;
     const abdicateButton = document.getElementById('abdicateButton');
     abdicateButton.textContent = details.button;
-    abdicateButton.hidden = level !== 'empire';
-    document.getElementById('capitulateButton').hidden = level === 'empire';
+    abdicateButton.hidden = false;
+    document.getElementById('capitulateButton').hidden = false;
 }
 
 function openDeleteConfirmation() {

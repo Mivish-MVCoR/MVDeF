@@ -287,56 +287,61 @@ body {
 }
 
 .danger-zone {
-    margin-top: 30px;
-}
-
-.danger-zone-frame {
-    padding: 20px;
-    border: 1px solid rgba(237, 89, 89, 0.75);
-    border-radius: 8px;
-    background: rgba(84, 20, 20, 0.12);
+    position: relative;
+    left: 50%;
+    width: 100vw;
+    margin: 34px 0 0;
+    padding: 0 24px 30px;
+    transform: translateX(-50%);
 }
 
 .danger-zone h2 {
-    margin-top: 8px;
-    color: #ed7777;
-    font-size: 0.8rem;
+    margin: 0 -24px;
+    padding: 0 18px 8px;
+    border-bottom: 4px solid #ed1b2f;
+    color: #ed1b2f;
+    font-family: Mosk, "Segoe UI", sans-serif;
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
     font-weight: 700;
-    letter-spacing: 0.12em;
     text-align: center;
-    text-transform: uppercase;
 }
 
 .danger-zone-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: clamp(24px, 9vw, 180px);
+    width: min(100%, 1280px);
+    margin: 46px auto 0;
 }
 
 .danger-zone-button {
-    min-height: 48px;
-    padding: 10px 16px;
-    border: 1px solid rgba(255, 166, 77, 0.55);
-    border-radius: 5px;
-    background: rgba(176, 93, 29, 0.12);
-    color: #ffad5c;
+    min-height: 112px;
+    padding: 18px 24px;
+    border: 4px solid #ff812b;
+    border-radius: 18px;
+    background: transparent;
+    box-shadow: 5px 6px 0 #ed1b2f;
+    color: #e8e9e8;
     cursor: pointer;
-    font: inherit;
+    font-family: Mosk, "Segoe UI", sans-serif;
+    font-size: clamp(1.2rem, 3vw, 2.25rem);
     font-weight: 700;
+    line-height: 1.2;
+    transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
 }
 
 .danger-zone-button:hover {
-    background: rgba(176, 93, 29, 0.22);
+    transform: translate(2px, 3px);
+    box-shadow: 3px 3px 0 #ed1b2f;
+    background: rgba(255, 129, 43, 0.08);
 }
 
 .danger-zone-button-delete {
-    border-color: rgba(237, 89, 89, 0.7);
-    background: rgba(140, 31, 31, 0.18);
-    color: #ed7777;
+    border-color: #ed1b2f;
 }
 
 .danger-zone-button-delete:hover {
-    background: rgba(140, 31, 31, 0.3);
+    background: rgba(237, 27, 47, 0.08);
 }
 
 .delete-empire-dialog {
@@ -407,6 +412,30 @@ body {
 }
 
 @media (max-width: 520px) {
+    .danger-zone {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+
+    .danger-zone h2 {
+        margin-right: -16px;
+        margin-left: -16px;
+    }
+
+    .danger-zone-actions {
+        gap: 14px;
+        margin-top: 28px;
+    }
+
+    .danger-zone-button {
+        min-height: 86px;
+        padding: 12px;
+        border-width: 3px;
+        border-radius: 12px;
+        box-shadow: 4px 4px 0 #ed1b2f;
+        font-size: 1rem;
+    }
+
     .delete-empire-card {
         padding: 18px;
     }
@@ -1684,6 +1713,66 @@ html[data-theme="light"] .toast {
 html[data-theme="light"] .status-online {
     color: var(--green);
     background: rgba(56, 135, 71, 0.08);
+}
+
+html[data-theme="light"] .danger-zone {
+    color: var(--text);
+}
+
+html[data-theme="light"] .danger-zone h2 {
+    border-bottom-color: #c51d30;
+    color: #c51d30;
+}
+
+html[data-theme="light"] .danger-zone-button {
+    background: #ffffff;
+    box-shadow: 5px 6px 0 #c51d30;
+    color: #26312a;
+}
+
+html[data-theme="light"] .danger-zone-button:hover {
+    background: #fff5ed;
+    box-shadow: 3px 3px 0 #c51d30;
+}
+
+html[data-theme="light"] .danger-zone-button-delete {
+    border-color: #c51d30;
+}
+
+html[data-theme="light"] .danger-zone-button-delete:hover {
+    background: #fff0f1;
+}
+
+html[data-theme="light"] .delete-empire-dialog {
+    border-color: #c51d30;
+    background: #ffffff;
+    color: #202a22;
+    box-shadow: 0 24px 80px rgba(30, 45, 32, 0.25);
+}
+
+html[data-theme="light"] .delete-empire-dialog::backdrop {
+    background: rgba(24, 31, 25, 0.62);
+}
+
+html[data-theme="light"] .delete-empire-card h2,
+html[data-theme="light"] .delete-empire-card .delete-empire-error {
+    color: #b42332;
+}
+
+html[data-theme="light"] .delete-empire-card p {
+    color: #39463d;
+}
+
+html[data-theme="light"] .delete-empire-cancel {
+    border-color: #7b877e;
+    background: #ffffff;
+    color: #515e55;
+}
+
+html[data-theme="light"] .delete-empire-confirm {
+    border-color: #c51d30;
+    background: #fff0e4 !important;
+    color: #b42332;
 }
 
 @media (max-width: 680px) {
