@@ -481,7 +481,7 @@
                     keys,
                     requestType,
                     empireName: empire.name
-                }).filter(Boolean);
+                });
                 return `
                     <div class="request-card" data-request-id="${requestId}">
                         <div class="request-info">
@@ -499,7 +499,7 @@
                         </div>
                     </div>
                 `;
-            });
+            }).filter(Boolean);
 
             const organizationLabels = {
                 empire: 'Імперія', city: 'Місто', village: 'Село', country: 'Країна'
