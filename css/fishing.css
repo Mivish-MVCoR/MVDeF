@@ -4,6 +4,17 @@
     margin-inline: auto;
 }
 
+.fishing-beta-banner {
+    margin-bottom: 20px;
+    padding: 13px 16px;
+    border: 1px solid rgba(231, 190, 112, 0.32);
+    border-radius: 6px;
+    background: rgba(231, 190, 112, 0.08);
+    color: #e8cf9f;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
 .fishing-page-heading,
 .fishing-card-heading {
     display: flex;
