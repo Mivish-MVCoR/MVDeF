@@ -344,7 +344,7 @@ export function startCast(player, { weather, time, now = Date.now(), random = Ma
     const baitId = Object.keys(EQUIPMENT.bait).find(key => player.bait[key] > 0);
     if (!baitId) fail("failed-precondition", "Немає наживки. Купи наживку на ринку.");
 
-    const waitMs = Math.floor(5000 + random() * 25001);
+    const waitMs = nextBiteDelay(random);
     const hasBite = random() < FISHING_RULES.cast.biteChance;
     const selected = hasBite
         ? selectFish(venue.id, { weather, time, random })
@@ -471,6 +471,11 @@ function applyAdditionalWear(player, slot, amount) {
     const item = player.equipment[slot];
     if (!item || item.durability <= 0) return;
     item.durability = Math.max(0, item.durability - amount);
+}
+
+function nextBiteDelay(random) {
+    const { minWaitMs, maxWaitMs } = FISHING_RULES.cast;
+    return Math.floor(minWaitMs + random() * (maxWaitMs - minWaitMs + 1));
 }
 
 export function advanceFight(player, { tension, reeling, now = Date.now(), random = Math.random }) {
@@ -648,7 +653,21 @@ export function runFishingAction(player, action, payload = {}, context = {}) {
             result = refreshAttempt(current, now, random);
             break;
         case "hook":
-            result = hookFish(current, { now, random, specimenId: context.specimenId });
+            if (!current.activeAttempt) {
+                fail("failed-precondition", "Зараз немає активної спроби риболовлі.");
+            }
+            refreshAttempt(current, now, random);
+            if (current.activeAttempt?.stage === "waiting") {
+                const waitMs = nextBiteDelay(random);
+                current.activeAttempt.startedAt = now;
+                current.activeAttempt.biteAt = now + waitMs;
+                current.activeAttempt.hookDeadline = current.activeAttempt.biteAt + FISHING_RULES.cast.hookWindowMs;
+                current.updatedAt = now;
+                return { player: current, result: { outcome: "spooked" } };
+            }
+            result = current.activeAttempt
+                ? hookFish(current, { now, random, specimenId: context.specimenId })
+                : current;
             break;
         case "fight":
             result = advanceFight(current, {

@@ -9,7 +9,7 @@ const elements = Object.fromEntries([
     "fishDirectionCue", "fishDirectionText", "counterPullText", "fatigueHint", "fishingHint",
     "joystickKnob", "joystickHelp",
     "starterKitBtn", "castBtn", "fishingActionRow", "fishingWaitingPanel", "fishingStageTitle",
-    "fishingStageDescription", "fishingHookPanel", "hookBtn", "hookCountdown", "hookTimer",
+    "fishingStageDescription", "fishingHookPanel", "hookBtn",
     "fishingFightPanel", "fightDistance", "fatigueOutput",
     "fatigueProgress", "reelBtn", "stopFightBtn", "fishingResultPanel", "fishingResultTitle",
     "fishingResultText", "equipmentList", "baitCount", "equipmentShop", "equipmentSelect",
@@ -23,7 +23,7 @@ let world = null;
 let catalog = null;
 let waitTimeout = null;
 let fightTicker = null;
-let hookTicker = null;
+let hookTimeout = null;
 let lastResultTimestamp = null;
 let pullDirection = null;
 let joystickPointerId = null;
@@ -356,7 +356,8 @@ function renderGameStage() {
     elements.hookBtn.hidden = false;
     elements.starterKitBtn.disabled = busy || player.wallet < catalog.rules.starterKitCost;
     elements.castBtn.disabled = !canCast;
-    elements.hookBtn.disabled = busy || attempt?.stage !== "hook";
+    elements.hookBtn.disabled = busy || !attempt || !["waiting", "hook"].includes(attempt.stage);
+    elements.hookBtn.dataset.ready = String(attempt?.stage === "hook");
     elements.hookBtn.textContent = attempt?.stage === "hook" ? "ПІДСІКАТИ ЗАРАЗ!" : "Підсікти";
     elements.venueSelect.disabled = busy || Boolean(attempt);
     elements.equipmentShop.hidden = Boolean(attempt);
@@ -390,9 +391,9 @@ function renderGameStage() {
 
     if (!attempt) {
         clearWaitingTimers();
-        if (hookTicker) clearInterval(hookTicker);
+        if (hookTimeout) clearTimeout(hookTimeout);
         if (fightTicker) clearInterval(fightTicker);
-        hookTicker = null;
+        hookTimeout = null;
         fightTicker = null;
         elements.reelBtn.dataset.reeling = "false";
         elements.reelBtn.setAttribute("aria-pressed", "false");
@@ -408,28 +409,29 @@ function renderGameStage() {
     elements.fishingResultPanel.hidden = true;
 
     if (attempt.stage === "waiting") {
-        if (hookTicker) clearInterval(hookTicker);
+        if (hookTimeout) clearTimeout(hookTimeout);
         if (fightTicker) clearInterval(fightTicker);
-        hookTicker = null;
+        hookTimeout = null;
         fightTicker = null;
         setPanel("fishingWaitingPanel");
         elements.fishingStageTitle.textContent = "Стеж за поплавком";
-        elements.fishingStageDescription.textContent = "Щойно поплавок піде під воду — одразу підсікай.";
+        elements.fishingStageDescription.textContent = "Натисни «Підсікти», щойно поплавок різко піде під воду. Передчасне натискання налякає рибу й почне очікування заново.";
         elements.fishingSceneCaption.textContent = "Поплавок погойдується на воді";
         elements.fishingScene.setAttribute("aria-label", "Поплавок на воді. Стеж за ним і підсікай, щойно він піде під воду.");
         scheduleWaitingRefresh(attempt);
     } else if (attempt.stage === "hook") {
         clearWaitingTimers();
         if (fightTicker) clearInterval(fightTicker);
+        if (hookTimeout) clearTimeout(hookTimeout);
         fightTicker = null;
         setPanel("fishingHookPanel");
         elements.fishingSceneCaption.textContent = "Клювання! Час підсікти";
         elements.fishingScene.setAttribute("aria-label", "Клювання! Поплавок пішов під воду. Час підсікти.");
-        renderHookTimer(attempt);
+        scheduleHookExpiry(attempt);
     } else if (attempt.stage === "fight") {
         clearWaitingTimers();
-        if (hookTicker) clearInterval(hookTicker);
-        hookTicker = null;
+        if (hookTimeout) clearTimeout(hookTimeout);
+        hookTimeout = null;
         setPanel("fishingFightPanel");
         elements.fishingSceneCaption.textContent = "Риба чинить опір — контролюй волосінь";
         const direction = attempt.fishDirection === "toward" ? "toward" : "away";
@@ -483,22 +485,12 @@ function scheduleWaitingRefresh(attempt) {
     waitTimeout = setTimeout(refresh, Math.max(0, attempt.biteAt - Date.now()));
 }
 
-function renderHookTimer(attempt) {
-    if (hookTicker) clearInterval(hookTicker);
-    const hookWindowMs = Math.max(1, attempt.hookDeadline - attempt.biteAt);
-    const paint = () => {
-        const remaining = Math.max(0, attempt.hookDeadline - Date.now());
-        elements.hookTimer.style.transform = `scaleX(${Math.min(1, remaining / hookWindowMs)})`;
-        elements.hookCountdown.value = `${(remaining / 1000).toFixed(1).replace(".", ",")} с`;
-        elements.hookCountdown.textContent = elements.hookCountdown.value;
-        if (remaining <= 0) {
-            clearInterval(hookTicker);
-            hookTicker = null;
-            performAction("refresh", {}, { quiet: true }).catch(() => {});
-        }
-    };
-    paint();
-    hookTicker = setInterval(paint, 50);
+function scheduleHookExpiry(attempt) {
+    if (hookTimeout) clearTimeout(hookTimeout);
+    hookTimeout = setTimeout(() => {
+        hookTimeout = null;
+        performAction("refresh", {}, { quiet: true }).catch(() => {});
+    }, Math.max(0, attempt.hookDeadline - Date.now()));
 }
 
 function scheduleFightTick() {
@@ -591,7 +583,12 @@ elements.castBtn.addEventListener("click", async () => {
         showNotice("Вудку закинуто.");
     }
 });
-elements.hookBtn.addEventListener("click", () => performAction("hook"));
+elements.hookBtn.addEventListener("click", async () => {
+    const response = await performAction("hook");
+    if (response?.result?.outcome === "spooked") {
+        showNotice("Передчасне підсікання налякало рибу. Очікування почалося заново.");
+    }
+});
 elements.stopFightBtn.addEventListener("click", () => performAction("stopFight"));
 function setJoystickDirection(clientX) {
     const bounds = elements.reelBtn.getBoundingClientRect();

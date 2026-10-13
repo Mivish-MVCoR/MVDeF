@@ -338,7 +338,7 @@
 }
 
 .fishing-scene[data-stage="hook"] .fishing-float-rings {
-    animation: float-splash 0.7s ease-out infinite;
+    animation: float-splash 0.7s ease-out 2;
 }
 
 .water-ripple {
@@ -415,7 +415,7 @@
 }
 
 .fishing-scene[data-stage="hook"] .fishing-float {
-    animation: float-submerge 700ms cubic-bezier(0.4, 0, 0.8, 0.25) forwards;
+    animation: float-submerge 800ms cubic-bezier(0.35, 0, 0.75, 0.2) forwards;
 }
 
 .fishing-scene[data-stage="fight"] .fishing-float {
@@ -431,9 +431,9 @@
 }
 
 @keyframes float-submerge {
-    0% { transform: translateY(0) rotate(0) scale(1); opacity: 1; }
-    18% { transform: translateY(5px) rotate(-5deg) scale(0.98); opacity: 1; }
-    100% { transform: translateY(68px) rotate(10deg) scale(0.78); opacity: 0.22; }
+    0% { top: 53%; transform: translateY(0) rotate(0) scale(1); opacity: 1; }
+    12% { top: 55%; transform: translateY(5px) rotate(-7deg) scale(0.96); opacity: 1; }
+    100% { top: 90%; transform: translateY(8px) rotate(11deg) scale(0.72); opacity: 0.08; }
 }
 
 @keyframes float-fight-away {
@@ -763,21 +763,13 @@
     letter-spacing: 0.04em;
 }
 
-.hook-countdown {
-    color: #f0d27f;
-    font-family: Consolas, monospace;
-    font-size: 1.1rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
 .fishing-hook-button:disabled {
     border: 1px solid var(--line);
     background: rgba(255, 255, 255, 0.035);
     color: var(--muted);
 }
 
-.fishing-hook-button:not(:disabled) {
+.fishing-hook-button[data-ready="true"] {
     border-color: #f0d27f;
     background: linear-gradient(135deg, #f0d27f, #c99845);
     box-shadow: 0 0 22px rgba(226, 189, 96, 0.38);
@@ -787,16 +779,6 @@
 
 @keyframes hook-button-pulse {
     to { box-shadow: 0 0 30px rgba(226, 189, 96, 0.72); }
-}
-
-.hook-timer {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    height: 4px;
-    transform-origin: left center;
-    background: #e2bd60;
 }
 
 .fishing-fight-actions {
@@ -1242,7 +1224,7 @@ html[data-theme="light"] .fishing-item-button {
         .fishing-scene .water-ripple,
         .fishing-scene[data-stage="fight"] .fishing-fish-motion,
         .fishing-scene[data-stage="fight"][data-reeling="true"] .fishing-tackle-line path,
-        .fishing-hook-button:not(:disabled) {
+        .fishing-hook-button[data-ready="true"] {
             animation-duration: 2s;
             animation-iteration-count: 1;
         }
