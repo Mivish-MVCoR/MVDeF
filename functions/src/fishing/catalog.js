@@ -257,7 +257,7 @@ export const FISHING_RULES = Object.freeze({
         bait: 250,
         total: 500
     }),
-    cast: Object.freeze({ biteChance: 0.9, minWaitMs: 5000, maxWaitMs: 30000, hookWindowMs: 3000 }),
+    cast: Object.freeze({ biteChance: 0.9, minWaitMs: 5000, maxWaitMs: 30000, hookWindowMs: 1000 }),
     fight: Object.freeze({ startingDistanceM: 50, counterplayReelMps: 0.7, fishApproachMps: 1.5 }),
     wear: Object.freeze({ durability: 120, freeAttempts: 4, fixedWearPerAttempt: 2.4 }),
     xp: Object.freeze({ firstCatchOfSpecies: 50, maxLevel: 250 })

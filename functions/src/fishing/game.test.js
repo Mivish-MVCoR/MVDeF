@@ -105,13 +105,14 @@ test("cast hides the fish, waits for its bite and opens the server-timed hook wi
     assert.equal(player.activeAttempt.stage, "waiting");
     refreshAttempt(player, 6000, deterministicRandom(0));
     assert.equal(player.activeAttempt.stage, "hook");
+    assert.equal(player.activeAttempt.hookDeadline - player.activeAttempt.hookPromptAt, 1000);
 
     const fishId = player.activeAttempt.fishId;
     assert.ok(fishId);
     assert.equal(publicAttempt(player.activeAttempt).fishId, undefined);
 });
 
-test("missed hook window consumes bait and completes exactly one fishing attempt", () => {
+test("an unhooked bite expires after the one-second hook window", () => {
     const player = readyPlayer();
     startCast(player, {
         weather: "clear",
@@ -120,14 +121,16 @@ test("missed hook window consumes bait and completes exactly one fishing attempt
         random: deterministicRandom(0),
         id: "attempt"
     });
-    refreshAttempt(player, 9001, deterministicRandom(0));
+    refreshAttempt(player, 6000, deterministicRandom(0));
+    assert.equal(player.activeAttempt.stage, "hook");
+    refreshAttempt(player, 7000, deterministicRandom(0));
     assert.equal(player.activeAttempt, null);
     assert.equal(player.lastResult.outcome, "missed-hook");
     assert.equal(player.bait.standard, 49);
     assert.equal(player.attemptsCompleted, 1);
 });
 
-test("a bite leaves three seconds to hook and accepts a timely hook", () => {
+test("a bite leaves exactly one second to hook and accepts a timely hook", () => {
     const player = readyPlayer();
     startCast(player, {
         weather: "clear",
@@ -139,14 +142,31 @@ test("a bite leaves three seconds to hook and accepts a timely hook", () => {
 
     refreshAttempt(player, 6000, deterministicRandom(0));
     assert.equal(player.activeAttempt.stage, "hook");
-    assert.equal(player.activeAttempt.hookDeadline - player.activeAttempt.biteAt, 3000);
+    assert.equal(player.activeAttempt.hookDeadline - player.activeAttempt.hookPromptAt, 1000);
 
     hookFish(player, {
-        now: 8999,
+        now: 6999,
         random: deterministicRandom(0),
         specimenId: "timely-specimen"
     });
     assert.equal(player.activeAttempt.stage, "fight");
+});
+
+test("an unhooked bite escapes immediately when the one-second window expires", () => {
+    const player = readyPlayer();
+    startCast(player, {
+        weather: "clear",
+        time: "day",
+        now: 1000,
+        random: deterministicRandom(0),
+        id: "attempt"
+    });
+
+    refreshAttempt(player, 6000, deterministicRandom(0));
+    assert.equal(player.activeAttempt.stage, "hook");
+    refreshAttempt(player, 7000, deterministicRandom(0));
+    assert.equal(player.activeAttempt, null);
+    assert.equal(player.lastResult.outcome, "missed-hook");
 });
 
 test("a fully server-driven first-catch fight grants a specimen and XP exactly once", () => {

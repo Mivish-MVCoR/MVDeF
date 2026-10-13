@@ -383,12 +383,22 @@ export function startCast(player, { weather, time, now = Date.now(), random = Ma
 export function refreshAttempt(player, now = Date.now(), random = Math.random) {
     requirePlayer(player);
     const attempt = player.activeAttempt;
-    if (!attempt || attempt.stage !== "waiting") return player;
+    if (!attempt) return player;
+
+    if (attempt.stage === "hook") {
+        if (now < attempt.hookDeadline) return player;
+        finishAttempt(player, { outcome: "missed-hook" }, now, random);
+        player.updatedAt = now;
+        return player;
+    }
+
+    if (attempt.stage !== "waiting") return player;
 
     if (now < attempt.biteAt) return player;
-    if (attempt.hasBite && now <= attempt.hookDeadline) {
+    if (attempt.hasBite) {
         attempt.stage = "hook";
         attempt.hookPromptAt = now;
+        attempt.hookDeadline = now + FISHING_RULES.cast.hookWindowMs;
         player.updatedAt = now;
         return player;
     }
@@ -409,7 +419,7 @@ export function hookFish(player, { now = Date.now(), random = Math.random, speci
     requirePlayer(player);
     const attempt = player.activeAttempt;
     if (!attempt || attempt.stage !== "hook") fail("failed-precondition", "Зараз немає клювання для підсікання.");
-    if (now > attempt.hookDeadline) {
+    if (now >= attempt.hookDeadline) {
         finishAttempt(player, { outcome: "missed-hook" }, now, random);
         player.updatedAt = now;
         return player;

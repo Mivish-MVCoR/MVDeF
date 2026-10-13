@@ -276,6 +276,7 @@ function renderStats() {
 function renderWorld() {
     elements.fishingWeather.textContent = `${world.weatherLabel} · оновлення за ${formatCountdown(world.weatherCycleEndsAt - Date.now())}`;
     elements.fishingTime.textContent = `${world.timeLabel}, ${String(world.gameTime.hour).padStart(2, "0")}:00`;
+    elements.fishingScene.dataset.weather = world.weather;
 }
 
 function formatCountdown(ms) {
