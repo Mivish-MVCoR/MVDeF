@@ -36,7 +36,9 @@ class TokenService(private val plugin: JavaPlugin) {
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             try {
                 require(apiUrl.startsWith("https://")) { "login-api-url має використовувати HTTPS." }
-                require(issuerSecret.length >= 32) { "У конфігурації плагіна не задано login-api-secret (мінімум 32 символи)." }
+                require(issuerSecret.length >= 32) {
+                    "Задай MVDEF_LOGIN_API_SECRET у змінних середовища сервера або login-api-secret у plugins/MVDeF/config.yml (мінімум 32 символи)."
+                }
                 val request = HttpRequest.newBuilder()
                     .uri(URI.create("$apiUrl/api/login/issue"))
                     .timeout(Duration.ofSeconds(15))

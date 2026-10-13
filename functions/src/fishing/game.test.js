@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
     EQUIPMENT,
+    FIGHT_RULES,
     FishingError,
     advanceFight,
     buyEquipment,
@@ -25,6 +26,24 @@ const deterministicRandom = value => () => value;
 function readyPlayer(now = 1_800_000_000_000) {
     const player = createPlayer(now);
     buyStarterKit(player, now);
+    return player;
+}
+
+function fightingPlayer(fishDirection) {
+    const player = readyPlayer(1000);
+    player.activeAttempt = {
+        id: "fight-test",
+        stage: "fight",
+        fishId: "roach",
+        fishMassGrams: 1000,
+        fishDirection,
+        distanceM: 50,
+        fatigue: 0,
+        tension: 45,
+        fightLastTickAt: 1000,
+        nextDirectionChangeAt: 10_000,
+        specimenId: "specimen-test"
+    };
     return player;
 }
 
@@ -146,6 +165,48 @@ test("a fully server-driven first-catch fight grants a specimen and XP exactly o
     assert.ok(player.lastResult.reward.xp >= 65);
     assert.equal(player.bait.standard, initialBait - 1);
     assert.equal(player.attemptsCompleted, 1);
+});
+
+test("fish only approaches while the player correctly resists its direction", () => {
+    const towardAndResisted = fightingPlayer("toward");
+    advanceFight(towardAndResisted, {
+        tension: 45,
+        reeling: true,
+        now: 2000,
+        random: deterministicRandom(0.99)
+    });
+    assert.equal(
+        towardAndResisted.activeAttempt.distanceM,
+        50 - FIGHT_RULES.fishApproachMps - EQUIPMENT.reel.starter.reelBonusMps
+    );
+    assert.ok(towardAndResisted.activeAttempt.fatigue > 0);
+
+    const towardUnresisted = fightingPlayer("toward");
+    advanceFight(towardUnresisted, {
+        tension: 45,
+        reeling: false,
+        now: 2000,
+        random: deterministicRandom(0.99)
+    });
+    assert.equal(towardUnresisted.activeAttempt.distanceM, 50);
+
+    const awayAndResisted = fightingPlayer("away");
+    advanceFight(awayAndResisted, {
+        tension: 45,
+        reeling: true,
+        now: 2000,
+        random: deterministicRandom(0.99)
+    });
+    assert.equal(awayAndResisted.activeAttempt.distanceM, 50 - FIGHT_RULES.counterplayReelMps);
+
+    const awayUnresisted = fightingPlayer("away");
+    advanceFight(awayUnresisted, {
+        tension: 45,
+        reeling: false,
+        now: 2000,
+        random: deterministicRandom(0.99)
+    });
+    assert.ok(awayUnresisted.activeAttempt.distanceM > 50);
 });
 
 test("no-bite consumes bait only at the configured loss chance", () => {

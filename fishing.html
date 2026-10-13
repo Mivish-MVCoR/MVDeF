@@ -32,16 +32,39 @@
                 <h1>Риболовля</h1>
                 <p>Обирай водойму, готуй спорядження та вирушай за уловом.</p>
             </div>
-            <div class="fishing-profile-chip" aria-live="polite">
+            <div id="fishingProfileChip" class="fishing-profile-chip" aria-live="polite" hidden>
                 <span id="fishingLevel">Рівень —</span>
                 <strong id="fishingWallet">— монет</strong>
             </div>
         </header>
 
+        <section id="fishingAuthRequired" class="card fishing-connection-card fishing-auth-card" aria-labelledby="fishingAuthTitle" hidden>
+            <p class="card-label">ДОСТУП ДО РИБОЛОВЛІ</p>
+            <h2 id="fishingAuthTitle">Увійди через Minecraft</h2>
+            <p id="fishingAuthMessage">Введи <code>//empire</code> на сервері та відкрий отримане посилання в цьому браузері. Після входу повернись до риболовлі через кабінет.</p>
+            <a class="btn-map fishing-cast-button" href="cabinet.html">До кабінету</a>
+        </section>
+
+        <section id="fishingLoading" class="card fishing-connection-card" role="status" aria-live="polite" hidden>
+            <span class="fishing-loader" aria-hidden="true"></span>
+            <div>
+                <p class="card-label">РИБАЛЬСЬКИЙ ТАБІР</p>
+                <p>Завантажуємо твій профіль, спорядження та стан водойми…</p>
+            </div>
+        </section>
+
+        <section id="fishingLoadError" class="card fishing-connection-card fishing-load-error" role="alert" hidden>
+            <div>
+                <p class="card-label">НЕ ВДАЛОСЯ ЗАВАНТАЖИТИ</p>
+                <p id="fishingLoadErrorText">Перевір з’єднання та спробуй ще раз.</p>
+            </div>
+            <button id="retryFishingBtn" class="btn-secondary fishing-secondary-button" type="button">Спробувати ще</button>
+        </section>
+
         <div id="fishingNotice" class="fishing-notice" role="status" aria-live="polite" hidden></div>
         <div id="fishingError" class="fishing-error" role="alert" hidden></div>
 
-        <div class="fishing-layout">
+        <div id="fishingLayout" class="fishing-layout" hidden>
             <section class="card fishing-scene-card" aria-labelledby="fishingSpotTitle">
                 <div class="fishing-card-heading">
                     <div>
@@ -62,65 +85,84 @@
                         <span class="water-ripple ripple-one"></span>
                         <span class="water-ripple ripple-two"></span>
                         <span class="water-ripple ripple-three"></span>
+                        <svg class="fishing-tackle-line" viewBox="0 0 600 220" preserveAspectRatio="none" aria-hidden="true">
+                            <path id="fishingTacklePath" d="M 12 -80 Q 160 -20 325 7 Q 385 72 465 148"></path>
+                        </svg>
+                        <span class="fishing-fish-motion" aria-hidden="true">
+                            <svg class="fishing-fish-icon" viewBox="0 0 72 40">
+                                <path d="M8 20C17 7 37 5 52 16L66 7L64 20L66 33L52 24C37 35 17 33 8 20Z"></path>
+                                <circle cx="22" cy="16" r="2" class="fish-eye"></circle>
+                                <path d="M32 10L38 20L32 30" class="fish-fin"></path>
+                            </svg>
+                        </span>
+                        <span class="fishing-float-rings" aria-hidden="true"></span>
                     </div>
                     <div class="fishing-float" aria-hidden="true"><span></span></div>
                     <div id="fishingSceneCaption" class="scene-caption">Завантажуємо рибальський табір…</div>
                 </div>
 
-                <div id="fishingIdlePanel" class="fishing-action-row">
+                <div id="fishingActionRow" class="fishing-action-row">
                     <p id="fishingHint">Спочатку придбай початковий комплект спорядження.</p>
-                    <button id="starterKitBtn" class="btn-secondary fishing-secondary-button" type="button" hidden disabled>
-                        Придбати стартовий комплект · 500
-                    </button>
-                    <button id="castBtn" class="btn-map fishing-cast-button" type="button" disabled>Закинути вудку</button>
+                    <div class="fishing-action-buttons">
+                        <button id="starterKitBtn" class="btn-secondary fishing-secondary-button" type="button" hidden disabled>
+                            Придбати стартовий комплект · 500
+                        </button>
+                        <button id="castBtn" class="btn-map fishing-cast-button" type="button" disabled>Закинути вудку</button>
+                        <button id="hookBtn" class="btn-map fishing-cast-button fishing-hook-button" type="button" disabled>Підсікти</button>
+                    </div>
                 </div>
 
                 <div id="fishingWaitingPanel" class="fishing-game-panel" hidden>
                     <div class="fishing-state-row">
-                        <strong id="fishingStageTitle">Очікуємо на клювання…</strong>
-                        <span id="fishingCountdown" class="fishing-countdown">—</span>
+                        <strong id="fishingStageTitle">Стеж за поплавком</strong>
                     </div>
-                    <p id="fishingStageDescription">Поплавок на воді. Будь напоготові.</p>
+                    <p id="fishingStageDescription">Щойно поплавок піде під воду — одразу підсікай.</p>
                 </div>
 
                 <div id="fishingHookPanel" class="fishing-game-panel fishing-hook-panel" hidden>
                     <div>
                         <strong>Клювання!</strong>
-                        <p>Натисни «Підсікти» вчасно.</p>
+                        <p>Поплавок пішов під воду — натисни «Підсікти» під сценою.</p>
                     </div>
-                    <button id="hookBtn" class="btn-map fishing-cast-button" type="button" disabled>Підсікти</button>
                     <div id="hookTimer" class="hook-timer" aria-hidden="true"></div>
                 </div>
 
                 <div id="fishingFightPanel" class="fishing-game-panel" hidden>
                     <div class="fishing-state-row">
-                        <strong>Тягни рибу до берега</strong>
+                        <strong>Виважуй рибу</strong>
                         <span id="fightDistance">50 м</span>
                     </div>
-                    <div class="fight-meter-group">
-                        <div class="fight-meter-heading">
-                            <label for="tensionRange">Натяг волосіні</label>
-                            <output id="tensionOutput" for="tensionRange">45%</output>
-                        </div>
-                        <input id="tensionRange" class="tension-range" type="range" min="0" max="100" value="45" disabled>
-                        <div class="tension-zones"><span>Зелена</span><span>Жовта</span><span>Червона</span></div>
+                    <div id="fishDirectionCue" class="fish-direction-cue" data-direction="away" aria-live="polite">
+                        <span class="fish-direction-icon" aria-hidden="true">→</span>
+                        <span id="fishDirectionText">Риба тягне від берега</span>
+                        <span id="counterPullText" class="counter-pull-text">Твоя дія: тягни до берега</span>
                     </div>
-                    <div class="fight-meter-group">
+                    <div class="fish-fatigue-card">
                         <div class="fight-meter-heading">
                             <span>Втома риби</span>
                             <output id="fatigueOutput">0%</output>
                         </div>
                         <progress id="fatigueProgress" class="fishing-progress fatigue-progress" max="100" value="0">0%</progress>
+                        <span id="fatigueHint" class="fatigue-hint">Риба ще має багато сил</span>
+                    </div>
+                    <div class="fishing-control-row">
+                        <div class="fishing-joystick-instructions">
+                            <strong>Джойстик</strong>
+                            <span id="joystickHelp">Веди в протилежний бік і утримуй</span>
+                        </div>
+                        <button id="reelBtn" class="fishing-joystick" type="button" aria-label="Джойстик: утримуй вліво або вправо, щоб протидіяти рибі" aria-pressed="false" disabled>
+                            <span class="joystick-arrow joystick-arrow-left" aria-hidden="true">←</span>
+                            <span class="joystick-track" aria-hidden="true"></span>
+                            <span class="joystick-arrow joystick-arrow-right" aria-hidden="true">→</span>
+                            <span id="joystickKnob" class="joystick-knob" aria-hidden="true"></span>
+                        </button>
                     </div>
                     <div class="fishing-fight-actions">
-                        <button id="reelBtn" class="btn-map fishing-reel-button" type="button" aria-pressed="false" disabled>
-                            Підмотувати
-                        </button>
                         <button id="stopFightBtn" class="btn-secondary fishing-secondary-button" type="button" disabled>
                             Відпустити рибу
                         </button>
                     </div>
-                    <p class="fishing-fight-help">Тримай натяг у зеленій зоні й підмотуй, коли риба втомлюється.</p>
+                    <p class="fishing-fight-help">Коли риба змінить напрямок, перемісти джойстик у протилежний бік. Сильна риба може пошкодити спорядження.</p>
                 </div>
 
                 <div id="fishingResultPanel" class="fishing-result-panel" aria-live="polite" hidden>

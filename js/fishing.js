@@ -1,12 +1,16 @@
-import { auth } from "./firebase.js";
+import { xpToNextLevel } from "../functions/src/fishing/catalog.js";
 import { CLOUDFLARE_API_URL, SITE_SESSION_KEY } from "./cloudflare-config.js";
 
 const elements = Object.fromEntries([
-    "fishingNotice", "fishingError", "fishingLevel", "fishingWallet", "venueSelect",
-    "fishingWeather", "fishingTime", "fishingScene", "fishingSceneCaption", "fishingHint",
-    "starterKitBtn", "castBtn", "fishingIdlePanel", "fishingWaitingPanel", "fishingStageTitle",
-    "fishingCountdown", "fishingStageDescription", "fishingHookPanel", "hookBtn", "hookTimer",
-    "fishingFightPanel", "fightDistance", "tensionRange", "tensionOutput", "fatigueOutput",
+    "fishingAuthRequired", "fishingAuthMessage", "fishingLoading", "fishingLoadError",
+    "fishingLoadErrorText", "retryFishingBtn", "fishingLayout", "fishingNotice",
+    "fishingError", "fishingProfileChip", "fishingLevel", "fishingWallet", "venueSelect",
+    "fishingWeather", "fishingTime", "fishingScene", "fishingSceneCaption", "fishingTacklePath",
+    "fishDirectionCue", "fishDirectionText", "counterPullText", "fatigueHint", "fishingHint",
+    "joystickKnob", "joystickHelp",
+    "starterKitBtn", "castBtn", "fishingActionRow", "fishingWaitingPanel", "fishingStageTitle",
+    "fishingStageDescription", "fishingHookPanel", "hookBtn", "hookTimer",
+    "fishingFightPanel", "fightDistance", "fatigueOutput",
     "fatigueProgress", "reelBtn", "stopFightBtn", "fishingResultPanel", "fishingResultTitle",
     "fishingResultText", "equipmentList", "baitCount", "equipmentShop", "equipmentSelect",
     "buyEquipmentBtn", "baitSelect", "baitQuantity", "buyBaitBtn", "fishingXp",
@@ -18,10 +22,11 @@ let player = null;
 let world = null;
 let catalog = null;
 let waitTimeout = null;
-let waitTicker = null;
 let fightTicker = null;
 let hookTicker = null;
 let lastResultTimestamp = null;
+let pullDirection = null;
+let joystickPointerId = null;
 let busy = false;
 
 const numberFormat = new Intl.NumberFormat("uk-UA");
@@ -84,6 +89,25 @@ function readableError(error) {
         return "Риболовля доступна лише після входу через Minecraft, не в демо-режимі.";
     }
     return error?.message?.replace(/^FirebaseError:\s*/, "") || "Не вдалося підключитися до рибальського сервера.";
+}
+
+function showLoginRequired(expired = false, isDemo = false) {
+    elements.fishingLoading.hidden = true;
+    elements.fishingLoadError.hidden = true;
+    elements.fishingLayout.hidden = true;
+    elements.fishingProfileChip.hidden = true;
+    elements.fishingAuthRequired.hidden = false;
+    elements.fishingAuthMessage.textContent = expired
+        ? "Термін входу завершився. Введи //empire на сервері, відкрий нове посилання, а потім повернись сюди через кабінет."
+        : isDemo
+            ? "Демо-режим не має доступу до рибальських даних. Увійди через посилання, отримане командою //empire на сервері."
+            : "Введи //empire на сервері та відкрий отримане посилання в цьому браузері. Після входу повернись до риболовлі через кабінет.";
+    if (expired) {
+        sessionStorage.removeItem(SITE_SESSION_KEY);
+        sessionStorage.removeItem("uuid");
+        sessionStorage.removeItem("playerName");
+        sessionStorage.removeItem("mvdefSessionExpiresAt");
+    }
 }
 
 function formatMass(grams) {
@@ -242,7 +266,7 @@ function renderStats() {
     elements.fishingXp.textContent = `${numberFormat.format(player.xp)} XP`;
     elements.fishingXpNext.textContent = player.level >= 250
         ? "Максимальний рівень"
-        : `${numberFormat.format(player.xpToNextLevel - player.xp)} XP`;
+        : `${numberFormat.format(xpToNextLevel(player.level) - player.xp)} XP`;
     elements.fishingCatchCount.textContent = numberFormat.format(player.catches);
     elements.fishingBestCatch.textContent = player.bestCatch
         ? `${player.bestCatch.name} · ${formatMass(player.bestCatch.massGrams)}`
@@ -260,8 +284,38 @@ function formatCountdown(ms) {
 }
 
 function setPanel(panel) {
-    for (const id of ["fishingIdlePanel", "fishingWaitingPanel", "fishingHookPanel", "fishingFightPanel"]) {
+    for (const id of ["fishingWaitingPanel", "fishingHookPanel", "fishingFightPanel"]) {
         elements[id].hidden = id !== panel;
+    }
+}
+
+function isPullingAgainstFish(direction = player?.activeAttempt?.fishDirection) {
+    const counterDirection = direction === "toward" ? "away" : "shore";
+    return pullDirection === counterDirection;
+}
+
+function updateJoystick() {
+    const hasFight = player?.activeAttempt?.stage === "fight";
+    const resisting = hasFight && isPullingAgainstFish();
+    elements.reelBtn.dataset.reeling = String(resisting);
+    elements.reelBtn.dataset.direction = pullDirection || "neutral";
+    elements.reelBtn.setAttribute("aria-pressed", String(resisting));
+    elements.fishingScene.dataset.reeling = String(resisting);
+    elements.joystickKnob.style.transform = pullDirection === "shore"
+        ? "translate(calc(-50% - 28px), -50%)"
+        : pullDirection === "away"
+            ? "translate(calc(-50% + 28px), -50%)"
+            : "translate(-50%, -50%)";
+    elements.reelBtn.setAttribute(
+        "aria-label",
+        `Джойстик: ${resisting ? "протидієш рибі" : "утримуй у протилежний бік від риби"}`
+    );
+    if (hasFight) {
+        elements.joystickHelp.textContent = resisting
+            ? `Тягнеш ${pullDirection === "shore" ? "до" : "від"} берега — протидієш рибі`
+            : pullDirection
+                ? "Це напрямок риби — змісти джойстик у протилежний бік"
+                : "Веди в протилежний бік і утримуй";
     }
 }
 
@@ -297,17 +351,17 @@ function renderGameStage() {
         Object.values(player.equipment).every(item => item.durability > 0) &&
         currentBaitTotal() > 0 && player.inventory.length < catalog.rules.inventoryCapacity;
     elements.starterKitBtn.hidden = Object.keys(player.equipment || {}).length > 0;
-    elements.castBtn.hidden = Object.keys(player.equipment || {}).length === 0;
+    elements.castBtn.hidden = false;
+    elements.hookBtn.hidden = false;
     elements.starterKitBtn.disabled = busy || player.wallet < catalog.rules.starterKitCost;
     elements.castBtn.disabled = !canCast;
+    elements.hookBtn.disabled = busy || attempt?.stage !== "hook";
     elements.venueSelect.disabled = busy || Boolean(attempt);
     elements.equipmentShop.hidden = Boolean(attempt);
     elements.baitSelect.disabled = busy || Boolean(attempt);
     elements.baitQuantity.disabled = busy || Boolean(attempt);
     elements.buyBaitBtn.disabled = busy || Boolean(attempt);
     elements.buyEquipmentBtn.disabled = busy || Boolean(attempt);
-    elements.hookBtn.disabled = busy || attempt?.stage !== "hook";
-    elements.tensionRange.disabled = busy || attempt?.stage !== "fight";
     elements.reelBtn.disabled = busy || attempt?.stage !== "fight";
     elements.stopFightBtn.disabled = busy || attempt?.stage !== "fight";
     elements.fishingScene.dataset.stage = attempt?.stage || "idle";
@@ -337,8 +391,13 @@ function renderGameStage() {
         fightTicker = null;
         elements.reelBtn.dataset.reeling = "false";
         elements.reelBtn.setAttribute("aria-pressed", "false");
-        elements.reelBtn.textContent = "Підмотувати";
-        setPanel("fishingIdlePanel");
+        pullDirection = null;
+        elements.reelBtn.dataset.direction = "neutral";
+        elements.joystickKnob.style.transform = "translateX(0)";
+        elements.joystickHelp.textContent = "Веди в протилежний бік і утримуй";
+        elements.fishingScene.dataset.reeling = "false";
+        elements.fishingScene.dataset.fishDirection = "";
+        setPanel(null);
         return;
     }
     elements.fishingResultPanel.hidden = true;
@@ -349,10 +408,10 @@ function renderGameStage() {
         hookTicker = null;
         fightTicker = null;
         setPanel("fishingWaitingPanel");
-        elements.fishingStageTitle.textContent = "Очікуємо на клювання…";
+        elements.fishingStageTitle.textContent = "Стеж за поплавком";
+        elements.fishingStageDescription.textContent = "Щойно поплавок піде під воду — одразу підсікай.";
         elements.fishingSceneCaption.textContent = "Поплавок погойдується на воді";
-        elements.fishingCountdown.textContent = formatCountdown(attempt.biteAt - Date.now());
-        elements.fishingStageDescription.textContent = "Тривалість очікування визначає сервер.";
+        elements.fishingScene.setAttribute("aria-label", "Поплавок на воді. Стеж за ним і підсікай, щойно він піде під воду.");
         scheduleWaitingRefresh(attempt);
     } else if (attempt.stage === "hook") {
         clearWaitingTimers();
@@ -360,6 +419,7 @@ function renderGameStage() {
         fightTicker = null;
         setPanel("fishingHookPanel");
         elements.fishingSceneCaption.textContent = "Клювання! Час підсікти";
+        elements.fishingScene.setAttribute("aria-label", "Клювання! Поплавок пішов під воду. Час підсікти.");
         renderHookTimer(attempt);
     } else if (attempt.stage === "fight") {
         clearWaitingTimers();
@@ -367,27 +427,48 @@ function renderGameStage() {
         hookTicker = null;
         setPanel("fishingFightPanel");
         elements.fishingSceneCaption.textContent = "Риба чинить опір — контролюй волосінь";
+        const direction = attempt.fishDirection === "toward" ? "toward" : "away";
+        const pullingTowardShore = direction === "away";
+        elements.fishingScene.dataset.fishDirection = direction;
+        elements.fishingScene.dataset.reeling = elements.reelBtn.dataset.reeling === "true" ? "true" : "false";
+        elements.fishingScene.setAttribute(
+            "aria-label",
+            `Риба тягне ${pullingTowardShore ? "від берега" : "до берега"}. Протидій її руху.`
+        );
+        elements.fishDirectionCue.dataset.direction = direction;
+        elements.fishDirectionText.textContent = `Риба тягне ${pullingTowardShore ? "від берега" : "до берега"}`;
+        elements.counterPullText.textContent = `Твоя дія: тягни ${pullingTowardShore ? "до" : "від"} берега`;
+        elements.joystickHelp.textContent = elements.reelBtn.dataset.reeling === "true"
+            ? `Тягнеш ${pullingTowardShore ? "до" : "від"} берега — протидієш рибі`
+            : "Веди джойстик у протилежний бік і утримуй";
         elements.fightDistance.textContent = `${Math.max(0, attempt.distanceM).toFixed(1).replace(".", ",")} м`;
-        elements.fatigueOutput.textContent = `${Math.round(attempt.fatigue)}%`;
-        elements.fatigueProgress.value = attempt.fatigue;
-        elements.tensionOutput.textContent = `${elements.tensionRange.value}%`;
-        elements.reelBtn.setAttribute("aria-pressed", elements.reelBtn.dataset.reeling === "true" ? "true" : "false");
+        const fatigue = Math.max(0, Math.min(100, attempt.fatigue));
+        elements.fatigueOutput.textContent = `${Math.round(fatigue)}%`;
+        elements.fatigueProgress.value = fatigue;
+        elements.fatigueProgress.dataset.level = fatigue >= 70 ? "tired" : fatigue >= 35 ? "weakening" : "fresh";
+        elements.fatigueHint.textContent = fatigue >= 70
+            ? "Риба втомилася — час підтягувати до берега"
+            : fatigue >= 35
+                ? "Риба слабшає — продовжуй тримати натяг"
+                : "Риба ще має багато сил";
+        elements.fishingTacklePath.setAttribute(
+            "d",
+            direction === "away"
+                ? "M 12 -80 Q 160 -20 325 7 Q 385 72 465 148"
+                : "M 12 -80 Q 160 -20 325 7 Q 365 65 432 132"
+        );
+        updateJoystick();
         scheduleFightTick();
     }
 }
 
 function clearWaitingTimers() {
     if (waitTimeout) clearTimeout(waitTimeout);
-    if (waitTicker) clearInterval(waitTicker);
     waitTimeout = null;
-    waitTicker = null;
 }
 
 function scheduleWaitingRefresh(attempt) {
     clearWaitingTimers();
-    waitTicker = setInterval(() => {
-        elements.fishingCountdown.textContent = formatCountdown(attempt.biteAt - Date.now());
-    }, 500);
     const refresh = async () => {
         const response = await performAction("refresh", {}, { quiet: true });
         if (!response && player?.activeAttempt?.stage === "waiting") {
@@ -417,8 +498,8 @@ function scheduleFightTick() {
     fightTicker = setInterval(() => {
         if (!player?.activeAttempt || player.activeAttempt.stage !== "fight" || busy) return;
         performAction("fight", {
-            tension: Number(elements.tensionRange.value),
-            reeling: elements.reelBtn.dataset.reeling === "true"
+            tension: 45,
+            reeling: isPullingAgainstFish()
         }, { quiet: true }).catch(() => {});
     }, 1000);
 }
@@ -436,14 +517,28 @@ function updatePage() {
 }
 
 async function loadState() {
+    elements.fishingAuthRequired.hidden = true;
+    elements.fishingLoadError.hidden = true;
+    elements.fishingLayout.hidden = true;
+    elements.fishingProfileChip.hidden = true;
+    elements.fishingLoading.hidden = false;
     try {
         const result = await apiCall("/api/fishing/state");
         ({ player, world, catalog } = result);
         populateShop();
         updatePage();
+        elements.fishingLoading.hidden = true;
+        elements.fishingLayout.hidden = false;
+        elements.fishingProfileChip.hidden = false;
     } catch (error) {
         console.error("Не вдалося завантажити рибальський табір:", error);
-        showError(readableError(error));
+        if (error?.code === "unauthenticated") {
+            showLoginRequired(true);
+        } else {
+            elements.fishingLoading.hidden = true;
+            elements.fishingLoadErrorText.textContent = readableError(error);
+            elements.fishingLoadError.hidden = false;
+        }
     }
 }
 
@@ -463,10 +558,10 @@ async function performAction(action, payload = {}, { quiet = false } = {}) {
         return response;
     } catch (error) {
         console.error(`Не вдалося виконати дію риболовлі «${action}»:`, error);
-        showError(readableError(error));
         if (error?.code === "unauthenticated") {
-            await auth.signOut().catch(signOutError => console.error("Не вдалося очистити Firebase-сеанс:", signOutError));
-            window.location.replace("login.html");
+            showLoginRequired(true);
+        } else {
+            showError(readableError(error));
         }
         return null;
     } finally {
@@ -490,14 +585,54 @@ elements.castBtn.addEventListener("click", async () => {
 });
 elements.hookBtn.addEventListener("click", () => performAction("hook"));
 elements.stopFightBtn.addEventListener("click", () => performAction("stopFight"));
-elements.tensionRange.addEventListener("input", () => {
-    elements.tensionOutput.textContent = `${elements.tensionRange.value}%`;
+function setJoystickDirection(clientX) {
+    const bounds = elements.reelBtn.getBoundingClientRect();
+    const offset = clientX - (bounds.left + bounds.width / 2);
+    pullDirection = offset < -8 ? "shore" : offset > 8 ? "away" : null;
+    updateJoystick();
+}
+
+elements.reelBtn.addEventListener("pointerdown", event => {
+    if (elements.reelBtn.disabled) return;
+    event.preventDefault();
+    joystickPointerId = event.pointerId;
+    elements.reelBtn.setPointerCapture(event.pointerId);
+    setJoystickDirection(event.clientX);
 });
-elements.reelBtn.addEventListener("click", () => {
-    const reeling = elements.reelBtn.dataset.reeling !== "true";
-    elements.reelBtn.dataset.reeling = String(reeling);
-    elements.reelBtn.setAttribute("aria-pressed", String(reeling));
-    elements.reelBtn.textContent = reeling ? "Зупинити підмотування" : "Підмотувати";
+elements.reelBtn.addEventListener("pointermove", event => {
+    if (event.pointerId === joystickPointerId) setJoystickDirection(event.clientX);
+});
+function releaseJoystick(event) {
+    if (event.pointerId !== joystickPointerId) return;
+    joystickPointerId = null;
+    pullDirection = null;
+    updateJoystick();
+}
+elements.reelBtn.addEventListener("pointerup", releaseJoystick);
+elements.reelBtn.addEventListener("pointercancel", releaseJoystick);
+elements.reelBtn.addEventListener("lostpointercapture", releaseJoystick);
+elements.reelBtn.addEventListener("keydown", event => {
+    if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        pullDirection = "shore";
+        updateJoystick();
+    } else if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        pullDirection = "away";
+        updateJoystick();
+    }
+});
+elements.reelBtn.addEventListener("keyup", event => {
+    if (["ArrowLeft", "ArrowRight", "a", "d"].includes(event.key.toLowerCase())) {
+        pullDirection = null;
+        updateJoystick();
+    }
+});
+elements.reelBtn.addEventListener("blur", () => {
+    if (joystickPointerId === null) {
+        pullDirection = null;
+        updateJoystick();
+    }
 });
 elements.buyEquipmentBtn.addEventListener("click", () => {
     const [slot, itemId] = elements.equipmentSelect.value.split(":");
@@ -513,18 +648,18 @@ elements.buyBaitBtn.addEventListener("click", () => {
 elements.sellAllBtn.addEventListener("click", () => {
     if (window.confirm("Продати весь улов з інвентаря?")) performAction("sellAllFish");
 });
+elements.retryFishingBtn.addEventListener("click", loadState);
 
 setInterval(() => {
     if (world) renderWorld();
 }, 1000);
 
-if (sessionStorage.getItem("isDemo") === "true" ||
+const isDemo = sessionStorage.getItem("isDemo") === "true";
+if (isDemo ||
     !sessionStorage.getItem(SITE_SESSION_KEY) ||
     !sessionStorage.getItem("uuid") ||
     sessionStorage.getItem("uuid") === "demo-user") {
-    showError(sessionStorage.getItem("isDemo") === "true"
-        ? "Риболовля поки недоступна в демо-режимі. Увійди через посилання з Minecraft."
-        : "Для риболовлі потрібно увійти через Minecraft.");
+    showLoginRequired(false, isDemo);
 } else {
     loadState();
 }

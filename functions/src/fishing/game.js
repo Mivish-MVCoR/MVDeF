@@ -522,11 +522,11 @@ export function advanceFight(player, { tension, reeling, now = Date.now(), rando
 
     const massResistance = Math.min(2.2, 0.45 + fishKg / 12);
     const fishPull = Math.max(0.35, massResistance * (1 - attempt.fatigue / 150));
-    if (attempt.fishDirection === "toward") {
-        attempt.distanceM -= (FIGHT_RULES.fishApproachMps + reel.definition.reelBonusMps * reelWear) * elapsed;
-    } else if (ideal && reeling) {
-        attempt.distanceM -= FIGHT_RULES.counterplayReelMps * elapsed;
-    } else {
+    if (ideal && reeling) {
+        attempt.distanceM -= attempt.fishDirection === "toward"
+            ? (FIGHT_RULES.fishApproachMps + reel.definition.reelBonusMps * reelWear) * elapsed
+            : FIGHT_RULES.counterplayReelMps * elapsed;
+    } else if (attempt.fishDirection === "away") {
         attempt.distanceM += fishPull * elapsed;
     }
 
