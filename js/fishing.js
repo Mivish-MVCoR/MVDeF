@@ -9,7 +9,7 @@ const elements = Object.fromEntries([
     "fishDirectionCue", "fishDirectionText", "counterPullText", "fatigueHint", "fishingHint",
     "joystickKnob", "joystickHelp",
     "starterKitBtn", "castBtn", "fishingActionRow", "fishingWaitingPanel", "fishingStageTitle",
-    "fishingStageDescription", "fishingHookPanel", "hookBtn", "hookTimer",
+    "fishingStageDescription", "fishingHookPanel", "hookBtn", "hookCountdown", "hookTimer",
     "fishingFightPanel", "fightDistance", "fatigueOutput",
     "fatigueProgress", "reelBtn", "stopFightBtn", "fishingResultPanel", "fishingResultTitle",
     "fishingResultText", "equipmentList", "baitCount", "equipmentShop", "equipmentSelect",
@@ -356,6 +356,7 @@ function renderGameStage() {
     elements.starterKitBtn.disabled = busy || player.wallet < catalog.rules.starterKitCost;
     elements.castBtn.disabled = !canCast;
     elements.hookBtn.disabled = busy || attempt?.stage !== "hook";
+    elements.hookBtn.textContent = attempt?.stage === "hook" ? "ПІДСІКАТИ ЗАРАЗ!" : "Підсікти";
     elements.venueSelect.disabled = busy || Boolean(attempt);
     elements.equipmentShop.hidden = Boolean(attempt);
     elements.baitSelect.disabled = busy || Boolean(attempt);
@@ -382,6 +383,9 @@ function renderGameStage() {
         elements.fishingHint.textContent = "Усе готово — закидай вудку та будь уважним.";
         elements.fishingSceneCaption.textContent = "Тиха вода чекає на твій закид";
     }
+    if (attempt?.stage === "hook") {
+        elements.fishingHint.textContent = "Клювання! Натисни підсвічену кнопку «Підсікти» зараз.";
+    }
 
     if (!attempt) {
         clearWaitingTimers();
@@ -393,7 +397,7 @@ function renderGameStage() {
         elements.reelBtn.setAttribute("aria-pressed", "false");
         pullDirection = null;
         elements.reelBtn.dataset.direction = "neutral";
-        elements.joystickKnob.style.transform = "translateX(0)";
+        elements.joystickKnob.style.transform = "translate(-50%, -50%)";
         elements.joystickHelp.textContent = "Веди в протилежний бік і утримуй";
         elements.fishingScene.dataset.reeling = "false";
         elements.fishingScene.dataset.fishDirection = "";
@@ -480,9 +484,12 @@ function scheduleWaitingRefresh(attempt) {
 
 function renderHookTimer(attempt) {
     if (hookTicker) clearInterval(hookTicker);
+    const hookWindowMs = Math.max(1, attempt.hookDeadline - attempt.biteAt);
     const paint = () => {
         const remaining = Math.max(0, attempt.hookDeadline - Date.now());
-        elements.hookTimer.style.transform = `scaleX(${remaining / 800})`;
+        elements.hookTimer.style.transform = `scaleX(${Math.min(1, remaining / hookWindowMs)})`;
+        elements.hookCountdown.value = `${(remaining / 1000).toFixed(1).replace(".", ",")} с`;
+        elements.hookCountdown.textContent = elements.hookCountdown.value;
         if (remaining <= 0) {
             clearInterval(hookTicker);
             hookTicker = null;

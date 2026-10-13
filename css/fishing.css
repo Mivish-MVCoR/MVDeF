@@ -1,5 +1,7 @@
 .fishing-page {
-    max-width: 1180px;
+    width: min(calc(100% - 48px), 1440px);
+    max-width: 1440px;
+    margin-inline: auto;
 }
 
 .fishing-page-heading,
@@ -709,14 +711,41 @@
     grid-template-columns: 1fr auto;
     align-items: center;
     overflow: hidden;
+    border-color: rgba(226, 189, 96, 0.55);
+    background: linear-gradient(100deg, rgba(226, 189, 96, 0.14), rgba(226, 189, 96, 0.035));
 }
 
 .fishing-hook-panel p { margin-top: 4px; }
+
+.fishing-hook-panel strong {
+    color: #f0d27f;
+    letter-spacing: 0.04em;
+}
+
+.hook-countdown {
+    color: #f0d27f;
+    font-family: Consolas, monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
 
 .fishing-hook-button:disabled {
     border: 1px solid var(--line);
     background: rgba(255, 255, 255, 0.035);
     color: var(--muted);
+}
+
+.fishing-hook-button:not(:disabled) {
+    border-color: #f0d27f;
+    background: linear-gradient(135deg, #f0d27f, #c99845);
+    box-shadow: 0 0 22px rgba(226, 189, 96, 0.38);
+    color: #172016;
+    animation: hook-button-pulse 700ms ease-in-out infinite alternate;
+}
+
+@keyframes hook-button-pulse {
+    to { box-shadow: 0 0 30px rgba(226, 189, 96, 0.72); }
 }
 
 .hook-timer {
@@ -1084,6 +1113,10 @@ html[data-theme="light"] .fishing-item-button {
         grid-template-columns: minmax(0, 1fr);
     }
 
+    .fishing-page {
+        width: min(calc(100% - 32px), 1440px);
+    }
+
     .fishing-scene-card {
         grid-row: auto;
     }
@@ -1166,7 +1199,8 @@ html[data-theme="light"] .fishing-item-button {
         .fishing-scene[data-stage="hook"] .fishing-float-rings,
         .fishing-scene[data-stage="fight"] .fishing-float,
         .fishing-scene[data-stage="fight"] .fishing-fish-motion,
-        .fishing-scene[data-stage="fight"][data-reeling="true"] .fishing-tackle-line path {
+        .fishing-scene[data-stage="fight"][data-reeling="true"] .fishing-tackle-line path,
+        .fishing-hook-button:not(:disabled) {
             animation-duration: 2s;
             animation-iteration-count: 1;
         }

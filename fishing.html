@@ -119,11 +119,12 @@
                     <p id="fishingStageDescription">Щойно поплавок піде під воду — одразу підсікай.</p>
                 </div>
 
-                <div id="fishingHookPanel" class="fishing-game-panel fishing-hook-panel" hidden>
+                <div id="fishingHookPanel" class="fishing-game-panel fishing-hook-panel" role="alert" hidden>
                     <div>
-                        <strong>Клювання!</strong>
-                        <p>Поплавок пішов під воду — натисни «Підсікти» під сценою.</p>
+                        <strong>КЛЮВАННЯ! ПІДСІКАЙ ЗАРАЗ</strong>
+                        <p>Поплавок пішов під воду — натисни підсвічену кнопку «Підсікти».</p>
                     </div>
+                    <output id="hookCountdown" class="hook-countdown" aria-label="Час на підсікання">3,0 с</output>
                     <div id="hookTimer" class="hook-timer" aria-hidden="true"></div>
                 </div>
 
