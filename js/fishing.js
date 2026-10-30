@@ -1,5 +1,7 @@
 import { xpToNextLevel } from "../functions/src/fishing/catalog.js";
 import { CLOUDFLARE_API_URL, SITE_SESSION_KEY } from "./cloudflare-config.js";
+import { db } from "./firebase.js";
+import { get, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const elements = Object.fromEntries([
     "fishingAuthRequired", "fishingAuthMessage", "fishingLoading", "fishingLoadError",
@@ -13,9 +15,12 @@ const elements = Object.fromEntries([
     "fishingFightPanel", "fightDistance", "fatigueOutput",
     "fatigueProgress", "reelBtn", "stopFightBtn", "fishingResultPanel", "fishingResultTitle",
     "fishingResultText", "equipmentList", "baitCount", "equipmentShop", "equipmentSelect",
-    "buyEquipmentBtn", "baitSelect", "baitQuantity", "buyBaitBtn", "fishingXp",
+    "buyEquipmentBtn", "baitSelect", "baitQuantity", "buyBaitBtn", "fishingXp", "fishingXpProgress",
     "fishingXpNext", "fishingCatchCount", "fishingBestCatch", "catchCount", "sellAllBtn",
-    "fishInventory", "collectionCount", "fishCollection"
+    "fishInventory", "collectionCount", "fishCollection", "desktopMarketColumns",
+    "fishingResetSection", "fishingResetUnavailable", "openFishingResetBtn",
+    "fishingResetDialog", "fishingResetEmpireInput", "fishingResetError",
+    "closeFishingResetBtn", "cancelFishingResetBtn", "confirmFishingResetBtn"
 ].map(id => [id, document.getElementById(id)]));
 
 let player = null;
@@ -28,12 +33,15 @@ let lastResultTimestamp = null;
 let pullDirection = null;
 let joystickPointerId = null;
 let busy = false;
+let empireName = "";
+let desktopMarketRendered = false;
 
 const numberFormat = new Intl.NumberFormat("uk-UA");
 const gameResultText = {
     "no-bite": ["Риба не клюнула", "Цього разу клювання не було. Перевір наживку й спробуй ще раз."],
     "missed-hook": ["Запізно!", "Ти не встиг підсікти рибу у відведений час."],
     "failed-hook": ["Риба зірвалася", "Гачок не втримав рибу. Спробуй ще раз."],
+    "hook-broken": ["Гачок не витримав", "Риба була важчою за максимальну міцність гачка — гачок зламався."],
     "rod-broken": ["Вудка зламалася", "Риба виявилася важчою за допустиме навантаження вудки."],
     "broken-equipment": ["Спорядження не витримало", "Риба втекла, а пошкоджене спорядження потребує заміни."],
     "released": ["Рибу відпущено", "Спробу завершено. Наживку витрачено."],
@@ -195,6 +203,63 @@ function populateShop() {
     }
 }
 
+function formatEquipmentDetails(slot, item) {
+    if (slot === "rod") return `До ${item.maxFishMassKg} кг`;
+    if (slot === "line") return `Навантаження до ${item.loadKg} кг`;
+    if (slot === "reel") return `Швидкість змотування +${item.reelBonusMps} м/с`;
+    if (slot === "bait") return `${numberFormat.format(item.price)} монет за 1 шт.`;
+    const upperLimit = item.preferredMaxMassGrams === null
+        ? "без верхньої межі"
+        : `${numberFormat.format(item.preferredMaxMassGrams)} г`;
+    const breakLimit = item.maxBreakMassGrams === null
+        ? "необмежена міцність"
+        : `розрив понад ${numberFormat.format(item.maxBreakMassGrams)} г`;
+    return `Звичайна вага: ${numberFormat.format(item.minCatchMassGrams)}–${upperLimit}; поза нею ${Math.round(item.outsideRangeCatchChance * 100)}%; ${breakLimit}`;
+}
+
+function renderDesktopMarket() {
+    if (desktopMarketRendered) return;
+    elements.desktopMarketColumns.replaceChildren();
+    const slotLabels = {
+        rod: "Вудки",
+        line: "Волосінь",
+        reel: "Котушки",
+        hook: "Гачки",
+        bait: "Наживки"
+    };
+    for (const slot of Object.keys(slotLabels)) {
+        const column = document.createElement("section");
+        column.className = "desktop-market-column";
+        const heading = document.createElement("h3");
+        heading.textContent = slotLabels[slot];
+        const items = document.createElement("div");
+        items.className = "desktop-market-items";
+        for (const [id, item] of Object.entries(catalog.equipment[slot])) {
+            const card = document.createElement("article");
+            card.className = "desktop-market-item";
+            const name = document.createElement("strong");
+            name.textContent = item.name;
+            const detail = document.createElement("small");
+            detail.textContent = formatEquipmentDetails(slot, item);
+            const buy = document.createElement("button");
+            buy.type = "button";
+            buy.className = "btn-secondary fishing-secondary-button";
+            buy.textContent = `Купити · ${numberFormat.format(item.price)}`;
+            buy.dataset.marketSlot = slot;
+            buy.dataset.marketItemId = id;
+            buy.disabled = busy || Boolean(player.activeAttempt);
+            buy.addEventListener("click", () => {
+                performAction("buyEquipment", { slot, itemId: id, quantity: 1 });
+            });
+            card.append(name, detail, buy);
+            items.append(card);
+        }
+        column.append(heading, items);
+        elements.desktopMarketColumns.append(column);
+    }
+    desktopMarketRendered = true;
+}
+
 function renderSpecimen(specimen, collection = false) {
     const card = document.createElement("article");
     card.className = "fish-specimen";
@@ -226,7 +291,8 @@ function makeActionButton(label, action, specimenId) {
     button.className = "btn-secondary fishing-item-button";
     button.textContent = label;
     button.disabled = busy || Boolean(player.activeAttempt);
-    button.addEventListener("click", () => performAction(action, { specimenId }));
+    button.dataset.action = action;
+    button.dataset.specimenId = specimenId;
     return button;
 }
 
@@ -260,10 +326,23 @@ function renderInventory() {
     }
 }
 
+for (const inventory of [elements.fishInventory, elements.fishCollection]) {
+    inventory.addEventListener("click", event => {
+        const button = event.target instanceof Element
+            ? event.target.closest("button[data-action][data-specimen-id]")
+            : null;
+        if (!button || button.disabled) return;
+        performAction(button.dataset.action, { specimenId: button.dataset.specimenId });
+    });
+}
+
 function renderStats() {
     elements.fishingLevel.textContent = `Рівень ${player.level}`;
     elements.fishingWallet.textContent = `${numberFormat.format(player.wallet)} монет`;
-    elements.fishingXp.textContent = `${numberFormat.format(player.xp)} XP`;
+    elements.fishingXp.textContent = `${numberFormat.format(player.totalXp)} XP`;
+    elements.fishingXpProgress.textContent = player.level >= 250
+        ? "Максимум"
+        : `${numberFormat.format(player.xp)} / ${numberFormat.format(xpToNextLevel(player.level))} XP`;
     elements.fishingXpNext.textContent = player.level >= 250
         ? "Максимальний рівень"
         : `${numberFormat.format(xpToNextLevel(player.level) - player.xp)} XP`;
@@ -365,6 +444,10 @@ function renderGameStage() {
     elements.baitQuantity.disabled = busy || Boolean(attempt);
     elements.buyBaitBtn.disabled = busy || Boolean(attempt);
     elements.buyEquipmentBtn.disabled = busy || Boolean(attempt);
+    elements.openFishingResetBtn.disabled = busy;
+    elements.desktopMarketColumns.querySelectorAll("button[data-market-slot]").forEach(button => {
+        button.disabled = busy || Boolean(attempt);
+    });
     elements.reelBtn.disabled = busy || attempt?.stage !== "fight";
     elements.stopFightBtn.disabled = busy || attempt?.stage !== "fight";
     elements.fishingScene.dataset.stage = attempt?.stage || "idle";
@@ -511,6 +594,7 @@ function updatePage() {
     renderWorld();
     renderVenueSelect();
     renderEquipment();
+    renderDesktopMarket();
     renderInventory();
     renderGameStage();
     renderResult();
@@ -530,6 +614,7 @@ async function loadState() {
         elements.fishingLoading.hidden = true;
         elements.fishingLayout.hidden = false;
         elements.fishingProfileChip.hidden = false;
+        return true;
     } catch (error) {
         console.error("Не вдалося завантажити рибальський табір:", error);
         if (error?.code === "unauthenticated") {
@@ -539,6 +624,7 @@ async function loadState() {
             elements.fishingLoadErrorText.textContent = readableError(error);
             elements.fishingLoadError.hidden = false;
         }
+        return false;
     }
 }
 
@@ -655,9 +741,88 @@ elements.sellAllBtn.addEventListener("click", () => {
 });
 elements.retryFishingBtn.addEventListener("click", loadState);
 
+async function loadEmpireName() {
+    const uuid = sessionStorage.getItem("uuid");
+    if (!uuid || uuid === "demo-user") return;
+    try {
+        const empires = await get(ref(db, "mvdef/empires"));
+        empires.forEach(child => {
+            if (child.val()?.ownerUuid === uuid) empireName = child.val()?.name?.trim() || "";
+        });
+        if (!empireName) return;
+        elements.fishingResetEmpireInput.placeholder = empireName;
+        elements.fishingResetSection.hidden = false;
+    } catch (error) {
+        console.error("Не вдалося завантажити назву імперії для підтвердження скидання:", error);
+        elements.fishingResetUnavailable.textContent =
+            "Не вдалося завантажити назву імперії. Скидання прогресу тимчасово недоступне.";
+        elements.fishingResetUnavailable.hidden = false;
+    }
+}
+
+function closeFishingResetDialog() {
+    elements.fishingResetDialog.close();
+    elements.fishingResetEmpireInput.value = "";
+    elements.fishingResetError.textContent = "";
+    elements.confirmFishingResetBtn.disabled = true;
+}
+
+elements.openFishingResetBtn.addEventListener("click", () => {
+    if (!empireName || busy) return;
+    elements.fishingResetEmpireInput.value = "";
+    elements.fishingResetEmpireInput.placeholder = empireName;
+    elements.fishingResetError.textContent = "";
+    elements.confirmFishingResetBtn.disabled = true;
+    elements.fishingResetDialog.showModal();
+    elements.fishingResetEmpireInput.focus();
+});
+elements.closeFishingResetBtn.addEventListener("click", closeFishingResetDialog);
+elements.cancelFishingResetBtn.addEventListener("click", closeFishingResetDialog);
+elements.fishingResetEmpireInput.addEventListener("input", () => {
+    elements.confirmFishingResetBtn.disabled =
+        elements.fishingResetEmpireInput.value.trim() !== empireName;
+});
+elements.confirmFishingResetBtn.addEventListener("click", async () => {
+    if (busy || elements.fishingResetEmpireInput.value.trim() !== empireName) return;
+    busy = true;
+    elements.confirmFishingResetBtn.disabled = true;
+    elements.confirmFishingResetBtn.textContent = "Скидаємо…";
+    elements.fishingResetError.textContent = "";
+    let profileDeleted = false;
+    try {
+        await apiCall("/api/fishing/reset", { method: "POST" });
+        profileDeleted = true;
+        clearWaitingTimers();
+        if (hookTimeout) clearTimeout(hookTimeout);
+        if (fightTicker) clearInterval(fightTicker);
+        hookTimeout = null;
+        fightTicker = null;
+        lastResultTimestamp = null;
+        const loaded = await loadState();
+        if (!loaded) {
+            throw new Error("Профіль скинуто, але новий стан не завантажився. Спробуй оновити сторінку.");
+        }
+        closeFishingResetDialog();
+        showNotice("Рибальський прогрес скинуто.");
+    } catch (error) {
+        console.error("Не вдалося скинути рибальський прогрес:", error);
+        elements.fishingResetError.textContent = profileDeleted
+            ? error.message
+            : readableError(error);
+    } finally {
+        busy = false;
+        elements.confirmFishingResetBtn.textContent = "Дійсно видалити";
+        elements.confirmFishingResetBtn.disabled =
+            elements.fishingResetEmpireInput.value.trim() !== empireName;
+        if (player && catalog && world) renderGameStage();
+    }
+});
+
 setInterval(() => {
     if (world) renderWorld();
 }, 1000);
+
+loadEmpireName();
 
 const isDemo = sessionStorage.getItem("isDemo") === "true";
 const isDemoPlayer = isDemo || sessionStorage.getItem("uuid") === "demo-user";

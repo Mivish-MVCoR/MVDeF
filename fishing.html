@@ -208,7 +208,8 @@
                         </div>
                     </div>
                     <div class="fishing-stats">
-                        <div><span>Досвід</span><strong id="fishingXp">—</strong></div>
+                        <div><span>Усього досвіду</span><strong id="fishingXp">—</strong></div>
+                        <div><span>Прогрес рівня</span><strong id="fishingXpProgress">—</strong></div>
                         <div><span>До наступного рівня</span><strong id="fishingXpNext">—</strong></div>
                         <div><span>Усього виловлено</span><strong id="fishingCatchCount">0</strong></div>
                         <div><span>Найкращий улов</span><strong id="fishingBestCatch">—</strong></div>
@@ -240,10 +241,43 @@
                 </div>
                 <div id="fishCollection" class="fish-inventory"></div>
             </section>
+
+            <section id="desktopEquipmentMarket" class="card desktop-equipment-market" aria-labelledby="desktopMarketTitle">
+                <div class="fishing-card-heading">
+                    <div>
+                        <p class="card-label">УСЕ СПОРЯДЖЕННЯ</p>
+                        <h2 id="desktopMarketTitle">Крамниця</h2>
+                    </div>
+                </div>
+                <div id="desktopMarketColumns" class="desktop-market-columns"></div>
+            </section>
         </div>
+
+        <section id="fishingResetSection" class="card fishing-reset-section" aria-labelledby="fishingResetTitle" hidden>
+            <p class="card-label">СКИДАННЯ ПРОГРЕСУ</p>
+            <h2 id="fishingResetTitle">Скинути рибальський прогрес</h2>
+            <p>Підтвердження назвою твоєї імперії захищає від випадкового скидання.</p>
+            <button id="openFishingResetBtn" class="fishing-reset-button" type="button">Зложити вудочки</button>
+        </section>
+        <p id="fishingResetUnavailable" class="fishing-reset-unavailable" role="alert" hidden></p>
     </main>
 
-    <script type="module" src="js/fishing.js?v=demo-access-2026-10-30"></script>
+    <dialog id="fishingResetDialog" class="fishing-reset-dialog" aria-labelledby="fishingResetDialogTitle">
+        <form method="dialog" class="fishing-reset-dialog-card">
+            <button id="closeFishingResetBtn" class="fishing-reset-close" type="button" aria-label="Закрити">×</button>
+            <h2 id="fishingResetDialogTitle">Дійсно скинути весь прогрес?</h2>
+            <p>Буде видалено рибальський профіль, спорядження, улов та прогрес. Дані імперії не зміняться.</p>
+            <label for="fishingResetEmpireInput">Введи назву своєї імперії для підтвердження</label>
+            <input id="fishingResetEmpireInput" type="text" autocomplete="off" placeholder="" aria-describedby="fishingResetError">
+            <p id="fishingResetError" class="fishing-reset-error" role="alert"></p>
+            <div class="fishing-reset-dialog-actions">
+                <button id="cancelFishingResetBtn" class="fishing-reset-cancel" type="button">Скасувати</button>
+                <button id="confirmFishingResetBtn" class="fishing-reset-confirm" type="button" disabled>Дійсно видалити</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script type="module" src="js/fishing.js?v=fishing-update-hooks-xp-reset"></script>
     <script type="module" src="js/logout.js"></script>
 </body>
 </html>

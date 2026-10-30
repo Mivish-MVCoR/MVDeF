@@ -43,9 +43,51 @@ export const EQUIPMENT = Object.freeze({
         professional: Object.freeze({ name: "Професійна котушка", price: 600, reelBonusMps: 1, tensionControl: 0.2, loadBonus: 0.2 })
     }),
     hook: Object.freeze({
-        starter: Object.freeze({ name: "Початковий гачок", price: 30, hookChance: 0.7 }),
-        quality: Object.freeze({ name: "Якісний гачок", price: 100, hookChance: 0.8 }),
-        professional: Object.freeze({ name: "Професійний гачок", price: 250, hookChance: 0.9 })
+        starter: Object.freeze({
+            name: "Початковий гачок",
+            price: 30,
+            hookChance: 0.7,
+            minCatchMassGrams: 10,
+            preferredMaxMassGrams: 780,
+            outsideRangeCatchChance: 0.16,
+            maxBreakMassGrams: 1208
+        }),
+        quality: Object.freeze({
+            name: "Любительський гачок",
+            price: 100,
+            hookChance: 0.8,
+            minCatchMassGrams: 10,
+            preferredMaxMassGrams: 1600,
+            outsideRangeCatchChance: 0.11,
+            maxBreakMassGrams: 1930
+        }),
+        professional: Object.freeze({
+            name: "Професійний гачок",
+            price: 250,
+            hookChance: 0.9,
+            minCatchMassGrams: 300,
+            preferredMaxMassGrams: 2200,
+            outsideRangeCatchChance: 0.09,
+            maxBreakMassGrams: 2600
+        }),
+        master: Object.freeze({
+            name: "Майстерський гачок",
+            price: 700,
+            hookChance: 0.95,
+            minCatchMassGrams: 700,
+            preferredMaxMassGrams: 3400,
+            outsideRangeCatchChance: 0.08,
+            maxBreakMassGrams: 4500
+        }),
+        elite: Object.freeze({
+            name: "Елітний гачок",
+            price: 1450,
+            hookChance: 0.98,
+            minCatchMassGrams: 900,
+            preferredMaxMassGrams: null,
+            outsideRangeCatchChance: 0.08,
+            maxBreakMassGrams: null
+        })
     }),
     bait: Object.freeze({
         standard: Object.freeze({ name: "Звичайна наживка", price: 5, lostOnNoBiteChance: 0.05 }),
@@ -429,15 +471,30 @@ export function hookFish(player, { now = Date.now(), random = Math.random, speci
     const rod = currentEquipment(player, "rod");
     const line = currentEquipment(player, "line");
     const reel = currentEquipment(player, "reel");
+    const fish = FISH[attempt.fishId];
+    const fishMassGrams = attempt.fishMassGrams;
+    if (hook.definition.maxBreakMassGrams !== null &&
+        fishMassGrams > hook.definition.maxBreakMassGrams) {
+        hook.item.durability = 0;
+        finishAttempt(player, { outcome: "hook-broken", fishName: fish.name }, now, random);
+        player.updatedAt = now;
+        return player;
+    }
+
+    const outsideHookRange = fishMassGrams < hook.definition.minCatchMassGrams ||
+        (hook.definition.preferredMaxMassGrams !== null &&
+            fishMassGrams > hook.definition.preferredMaxMassGrams);
     const hookWear = Math.max(0, Math.min(1, hook.item.durability / INITIAL_DURABILITY));
-    const hookChance = Math.max(0, Math.min(1, hook.definition.hookChance * hookWear));
+    const baseHookChance = outsideHookRange
+        ? hook.definition.outsideRangeCatchChance
+        : hook.definition.hookChance;
+    const hookChance = Math.max(0, Math.min(1, baseHookChance * hookWear));
     if (random() >= hookChance) {
         finishAttempt(player, { outcome: "failed-hook" }, now, random);
         player.updatedAt = now;
         return player;
     }
 
-    const fish = FISH[attempt.fishId];
     const massKg = attempt.fishMassGrams / 1000;
     const rodWear = rod.item.durability / INITIAL_DURABILITY;
     const rodLimitKg = rod.definition.maxFishMassKg * Math.max(0.1, rodWear);

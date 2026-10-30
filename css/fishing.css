@@ -1142,6 +1142,221 @@ html[data-theme="light"] .fishing-item-button {
     background: rgba(35, 77, 41, 0.035);
 }
 
+.desktop-equipment-market {
+    grid-column: 1 / -1;
+}
+
+.desktop-market-columns {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.desktop-market-column {
+    min-width: 0;
+}
+
+.desktop-market-column h3 {
+    margin-bottom: 8px;
+    color: var(--green);
+    font-size: 0.9rem;
+}
+
+.desktop-market-items {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+}
+
+.desktop-market-item {
+    display: grid;
+    gap: 7px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.desktop-market-item strong {
+    color: var(--text);
+    font-size: 0.74rem;
+}
+
+.desktop-market-item small {
+    min-height: 3.4em;
+    color: var(--muted);
+    font-size: 0.64rem;
+    line-height: 1.4;
+}
+
+.desktop-market-item button {
+    width: 100%;
+    min-height: 34px;
+    padding: 5px;
+    font-size: 0.66rem;
+}
+
+.fishing-reset-section {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+    margin-top: 20px;
+    border-color: rgba(237, 27, 47, 0.4);
+}
+
+.fishing-reset-section[hidden],
+.fishing-reset-unavailable[hidden] {
+    display: none;
+}
+
+.fishing-reset-section h2 {
+    color: #ed6b74;
+    font-size: 1.15rem;
+}
+
+.fishing-reset-section > p:not(.card-label) {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.fishing-reset-button {
+    min-height: 44px;
+    padding: 9px 16px;
+    border: 1px solid #ed1b2f;
+    border-radius: 5px;
+    background: #651d26;
+    color: #ffe4e6;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.fishing-reset-button:hover {
+    background: #86232e;
+}
+
+.fishing-reset-button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+.fishing-reset-dialog {
+    width: min(520px, calc(100vw - 32px));
+    padding: 0;
+    border: 1px solid #ed5959;
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
+}
+
+.fishing-reset-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(4px);
+}
+
+.fishing-reset-dialog-card {
+    position: relative;
+    display: grid;
+    gap: 14px;
+    padding: 26px;
+}
+
+.fishing-reset-dialog-card h2 {
+    padding-right: 32px;
+    color: #ed6b74;
+    font-size: 1.15rem;
+}
+
+.fishing-reset-dialog-card p,
+.fishing-reset-dialog-card label {
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.fishing-reset-dialog-card input {
+    min-height: 42px;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+}
+
+.fishing-reset-dialog-card input:focus {
+    outline: 2px solid #ed5959;
+    outline-offset: 1px;
+}
+
+.fishing-reset-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.fishing-reset-error {
+    color: #ed6b74 !important;
+}
+
+.fishing-reset-dialog-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.fishing-reset-dialog-actions button {
+    min-height: 44px;
+    padding: 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.fishing-reset-cancel {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+}
+
+.fishing-reset-confirm {
+    border: 1px solid #ed1b2f;
+    background: #8c1f2c;
+    color: white;
+}
+
+.fishing-reset-confirm:disabled {
+    border-color: #69716d;
+    background: #555b58;
+    color: #c1c5c3;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.fishing-reset-unavailable {
+    margin-top: 16px;
+    color: #ed6b74;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 1099px) {
+    .desktop-equipment-market {
+        display: none;
+    }
+}
+
 @media (max-width: 760px) {
     .fishing-layout {
         grid-template-columns: minmax(0, 1fr);

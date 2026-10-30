@@ -47,6 +47,20 @@ function fightingPlayer(fishDirection) {
     return player;
 }
 
+function playerWithHookedFish(hookId, fishId, fishMassGrams) {
+    const player = readyPlayer(1000);
+    player.equipment.hook.id = hookId;
+    player.activeAttempt = {
+        id: "hook-test",
+        stage: "hook",
+        fishId,
+        fishMassGrams,
+        hookDeadline: 10_000,
+        baitId: "standard"
+    };
+    return player;
+}
+
 test("first-time player receives one 500-coin starter balance and buys a durable kit atomically", () => {
     const player = createPlayer(100);
     assert.equal(player.wallet, 500);
@@ -87,6 +101,24 @@ test("starter purchases, venue gates, bait and inventory capacity are enforced s
         () => startCast(player, { weather: "clear", time: "day", now: 202, random: deterministicRandom(0.2), id: "attempt" }),
         error => error instanceof FishingError && error.code === "resource-exhausted"
     );
+});
+
+test("master and elite hooks use configured stats and can be bought without level gates", () => {
+    const player = readyPlayer();
+    player.wallet = 3000;
+
+    buyEquipment(player, "hook", "master", 1, 200);
+    assert.equal(player.equipment.hook.id, "master");
+    assert.equal(EQUIPMENT.hook.master.minCatchMassGrams, 700);
+    assert.equal(EQUIPMENT.hook.master.preferredMaxMassGrams, 3400);
+    assert.equal(EQUIPMENT.hook.master.outsideRangeCatchChance, 0.08);
+    assert.equal(EQUIPMENT.hook.master.maxBreakMassGrams, 4500);
+
+    buyEquipment(player, "hook", "elite", 1, 201);
+    assert.equal(player.level, 1);
+    assert.equal(player.equipment.hook.id, "elite");
+    assert.equal(EQUIPMENT.hook.elite.maxBreakMassGrams, null);
+    assert.equal(player.wallet, 3000 - 700 - 1450);
 });
 
 test("cast hides the fish, waits for its bite and opens the server-timed hook window", () => {
@@ -150,6 +182,30 @@ test("a bite leaves exactly one second to hook and accepts a timely hook", () =>
         specimenId: "timely-specimen"
     });
     assert.equal(player.activeAttempt.stage, "fight");
+});
+
+test("hook weight ranges use the configured rare catch odds and break limits", () => {
+    const starterOverLimit = playerWithHookedFish("starter", "roach", 800);
+    hookFish(starterOverLimit, { now: 100, random: deterministicRandom(0.15), specimenId: "small-odds" });
+    assert.equal(starterOverLimit.activeAttempt.stage, "fight");
+
+    const missedStarterOverLimit = playerWithHookedFish("starter", "roach", 800);
+    hookFish(missedStarterOverLimit, { now: 100, random: deterministicRandom(0.16), specimenId: "missed-odds" });
+    assert.equal(missedStarterOverLimit.lastResult.outcome, "failed-hook");
+
+    const underweightProfessional = playerWithHookedFish("professional", "common-bleak", 5);
+    hookFish(underweightProfessional, { now: 100, random: deterministicRandom(0.08), specimenId: "fry" });
+    assert.equal(underweightProfessional.activeAttempt.stage, "fight");
+
+    const brokenStarter = playerWithHookedFish("starter", "roach", 1209);
+    hookFish(brokenStarter, { now: 100, random: deterministicRandom(0), specimenId: "too-heavy" });
+    assert.equal(brokenStarter.lastResult.outcome, "hook-broken");
+    assert.equal(brokenStarter.equipment.hook.durability, 0);
+
+    const eliteWithLargeFish = playerWithHookedFish("elite", "blue-shark", 100_000);
+    hookFish(eliteWithLargeFish, { now: 100, random: deterministicRandom(0), specimenId: "elite-fish" });
+    assert.equal(eliteWithLargeFish.lastResult.outcome, "rod-broken");
+    assert.equal(eliteWithLargeFish.equipment.hook.durability, 120);
 });
 
 test("an unhooked bite escapes immediately when the one-second window expires", () => {
@@ -250,6 +306,9 @@ test("a fully server-driven first-catch fight grants a specimen and XP exactly o
     assert.equal(player.discoveredSpecies[player.inventory[0].fishId], true);
     assert.equal(player.lastResult.reward.firstCatch, true);
     assert.ok(player.lastResult.reward.xp >= 65);
+    assert.equal(player.totalXp, player.lastResult.reward.xp);
+    assert.equal(player.level, 2);
+    assert.equal(player.xp, player.totalXp - 55);
     assert.equal(player.bait.standard, initialBait - 1);
     assert.equal(player.attemptsCompleted, 1);
 });
@@ -336,6 +395,22 @@ test("each sale and collection transfer verifies the specific owned specimen", (
     assert.equal(allSale.coins, 20);
     assert.equal(player.wallet, 100);
     assert.equal(player.inventory.length, 0);
+});
+
+test("sequential sale and collection actions update the latest fishing profile", () => {
+    const player = readyPlayer();
+    player.inventory = [
+        { id: "one", fishId: "roach", name: "Плітка", price: 20, massGrams: 100 },
+        { id: "two", fishId: "bream", name: "Лящ", price: 80, massGrams: 2000 }
+    ];
+
+    const collectionAction = runFishingAction(player, "moveFishToCollection", { specimenId: "two" }, { now: 300 });
+    const saleAction = runFishingAction(collectionAction.player, "sellFish", { specimenId: "one" }, { now: 301 });
+    const restoreAction = runFishingAction(saleAction.player, "restoreFishFromCollection", { specimenId: "two" }, { now: 302 });
+
+    assert.equal(saleAction.player.wallet, player.wallet + 20);
+    assert.deepEqual(restoreAction.player.inventory.map(specimen => specimen.id), ["two"]);
+    assert.equal(restoreAction.player.collection.length, 0);
 });
 
 test("weather stays stable during a cycle and rolls over once when the next starts", () => {
