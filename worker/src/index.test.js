@@ -65,6 +65,56 @@ test("worker-issued session tokens are signed and bound to a Minecraft UUID", as
     assert.equal(await verifySessionToken(malformedUid, { SESSION_SECRET: secret }), null);
 });
 
+test("demo fishing access is gated and reset deletes only the authenticated fishing profile", async () => {
+    const secret = "test-session-secret-with-sufficient-entropy";
+    const statements = [];
+    const env = {
+        SESSION_SECRET: secret,
+        DEMO_FISHING_ENABLED: "true",
+        ALLOWED_ORIGINS: "https://site.example",
+        DB: {
+            prepare(sql) {
+                return {
+                    bind(...values) {
+                        statements.push({ sql, values });
+                        return this;
+                    },
+                    async run() {
+                        return { meta: { changes: 1 } };
+                    }
+                };
+            }
+        }
+    };
+    const demoResponse = await worker.fetch(new Request("https://api.example/api/login/demo", {
+        method: "POST",
+        headers: { origin: "https://site.example" }
+    }), env);
+    assert.equal(demoResponse.status, 200);
+    const demoSession = await demoResponse.json();
+    assert.equal(await verifySessionToken(demoSession.sessionToken, { SESSION_SECRET: secret }), "demo-user");
+
+    const resetResponse = await worker.fetch(new Request("https://api.example/api/fishing/reset", {
+        method: "POST",
+        headers: {
+            origin: "https://site.example",
+            authorization: `Bearer ${demoSession.sessionToken}`
+        }
+    }), env);
+    assert.equal(resetResponse.status, 200);
+    assert.deepEqual(await resetResponse.json(), { deleted: true });
+    assert.deepEqual(statements, [{
+        sql: "DELETE FROM fishing_players WHERE uid = ?",
+        values: ["demo-user"]
+    }]);
+
+    const disabledResponse = await worker.fetch(new Request("https://api.example/api/login/demo", {
+        method: "POST",
+        headers: { origin: "https://site.example" }
+    }), { ...env, DEMO_FISHING_ENABLED: "false" });
+    assert.equal(disabledResponse.status, 403);
+});
+
 test("Minecraft login token is issued and atomically exchanged for a signed site session", async () => {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const issuedTokens = new Map();

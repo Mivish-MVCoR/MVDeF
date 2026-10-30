@@ -193,6 +193,11 @@
             background: #4ade80;
             border-radius: 50%;
         }
+
+        .danger-zone .danger-zone-actions {
+            grid-template-columns: minmax(0, 1fr);
+            max-width: 640px;
+        }
     </style>
     <link rel="stylesheet" href="css/portal.css">
 </head>
@@ -236,7 +241,7 @@
             <section class="card">
                 <div class="card-label">Відпочинок</div>
                 <h2 class="section-title">Риболовля</h2>
-                <p class="sub">Невдовзі тут можна буде вирушити на риболовлю.<br>(подальша розробка розпочнеться з 1.11.26)</p>
+                <p class="sub">Відпочинь і випробуй удачу на водоймі.</p>
                 <a class="btn-map" href="fishing.html">Відкрити риболовлю →</a>
             </section>
 
@@ -245,12 +250,33 @@
                 <div id="notifications"><div class="empty">Завантаження...</div></div>
             </div>
         </div>
+        <section class="danger-zone" aria-labelledby="dangerZoneTitle">
+            <h2 id="dangerZoneTitle">Небезпечна зона !</h2>
+            <div class="danger-zone-actions">
+                <button class="danger-zone-button danger-zone-button-delete" id="deleteFishingDataButton" type="button">
+                    Видалити дані риболовлі
+                </button>
+            </div>
+            <p class="empty" id="deleteFishingDataStatus" role="status" hidden></p>
+        </section>
     </main>
+    <dialog class="delete-empire-dialog" id="deleteFishingDataDialog" aria-labelledby="deleteFishingDataTitle">
+        <form method="dialog" class="delete-empire-card">
+            <h2 id="deleteFishingDataTitle">Видалити дані риболовлі?</h2>
+            <p>Буде видалено лише твій профіль риболовлі: улов, спорядження та прогрес. Дані кабінету, імперії й інші дані не зміняться.</p>
+            <p class="delete-empire-error" id="deleteFishingDataError" role="alert"></p>
+            <div class="delete-empire-actions">
+                <button class="delete-empire-cancel" id="cancelDeleteFishingData" type="button">Скасувати</button>
+                <button class="delete-empire-confirm" id="confirmDeleteFishingData" type="button">Видалити дані риболовлі</button>
+            </div>
+        </form>
+    </dialog>
 
     <script type="module">
         import { db, auth } from './js/firebase.js';
         import { ref, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { CLOUDFLARE_API_URL, SITE_SESSION_KEY } from './js/cloudflare-config.js';
         import './js/moderator-shortcut.js';
 
         const uuid = sessionStorage.getItem('uuid');
@@ -259,6 +285,51 @@
         if (!uuid) { window.location.href = 'login.html'; }
 
         document.getElementById('greetingName').textContent = `Вітаємо, ${playerName || 'Гравець'}`;
+        const deleteFishingDataDialog = document.getElementById('deleteFishingDataDialog');
+        const deleteFishingDataError = document.getElementById('deleteFishingDataError');
+        const confirmDeleteFishingData = document.getElementById('confirmDeleteFishingData');
+
+        document.getElementById('deleteFishingDataButton').addEventListener('click', () => {
+            deleteFishingDataError.textContent = '';
+            deleteFishingDataDialog.showModal();
+        });
+        document.getElementById('cancelDeleteFishingData').addEventListener('click', () => {
+            deleteFishingDataDialog.close();
+        });
+        confirmDeleteFishingData.addEventListener('click', async () => {
+            confirmDeleteFishingData.disabled = true;
+            confirmDeleteFishingData.textContent = 'Видаляємо…';
+            deleteFishingDataError.textContent = '';
+            try {
+                let token = sessionStorage.getItem(SITE_SESSION_KEY);
+                if (!token && (sessionStorage.getItem('isDemo') === 'true' || uuid === 'demo-user')) {
+                    const demoResponse = await fetch(`${CLOUDFLARE_API_URL}/api/login/demo`, { method: 'POST' });
+                    const demoSession = await demoResponse.json();
+                    if (!demoResponse.ok) {
+                        throw new Error(demoSession.error?.message || 'Не вдалося відкрити демо-доступ.');
+                    }
+                    token = demoSession.sessionToken;
+                    sessionStorage.setItem(SITE_SESSION_KEY, token);
+                }
+                if (!token) throw new Error('Сеанс входу не знайдено. Увійди знову та спробуй ще раз.');
+                const response = await fetch(`${CLOUDFLARE_API_URL}/api/fishing/reset`, {
+                    method: 'POST',
+                    headers: { authorization: `Bearer ${token}` }
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error?.message || 'Не вдалося видалити дані риболовлі.');
+                deleteFishingDataDialog.close();
+                const status = document.getElementById('deleteFishingDataStatus');
+                status.textContent = 'Дані риболовлі видалено. Інші дані не змінено.';
+                status.hidden = false;
+            } catch (error) {
+                console.error('Не вдалося видалити дані риболовлі:', error);
+                deleteFishingDataError.textContent = error.message || 'Не вдалося видалити дані риболовлі. Спробуй ще раз.';
+            } finally {
+                confirmDeleteFishingData.disabled = false;
+                confirmDeleteFishingData.textContent = 'Видалити дані риболовлі';
+            }
+        });
 
         let logoClicks = 0;
         const logoEasterEggMessages = {

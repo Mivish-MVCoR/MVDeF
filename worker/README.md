@@ -11,6 +11,10 @@ The Worker stores profiles, shared weather, and one-time login tokens in D1.
 It signs short-lived site sessions with a Cloudflare Worker secret. The
 plugin-to-Worker credential is a separate secret that must be kept only in the
 Minecraft server's environment/configuration and the Worker's secret store.
+The cabinet can delete only the current session's fishing profile. Demo
+fishing access is controlled by `DEMO_FISHING_ENABLED` in `wrangler.toml`;
+set it to `"false"` and redeploy to disable it. Demo sessions share the
+`demo-user` fishing profile.
 
 ## Deployment status
 

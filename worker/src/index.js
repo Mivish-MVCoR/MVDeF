@@ -103,6 +103,20 @@ async function exchangeMinecraftToken(token, db, secret, nowSeconds) {
     };
 }
 
+async function createDemoSession(secret, nowSeconds) {
+    if (!secret || secret.length < 32) throw new Error("Missing or weak SESSION_SECRET Worker secret.");
+    const expiresAt = nowSeconds + SESSION_LIFETIME_SECONDS;
+    const sessionToken = await signSession({
+        iss: SESSION_ISSUER,
+        sub: "demo-user",
+        playerName: "Demo",
+        demo: true,
+        iat: nowSeconds,
+        exp: expiresAt
+    }, secret);
+    return { sessionToken, uuid: "demo-user", playerName: "Demo", expiresAt: expiresAt * 1000 };
+}
+
 function decodeBase64Url(value) {
     const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
     const binary = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
@@ -127,10 +141,12 @@ async function verifySessionToken(idToken, env) {
         claims.exp > nowSeconds + SESSION_LIFETIME_SECONDS ||
         !Number.isInteger(claims.iat) || claims.iat > nowSeconds + 60 ||
         claims.exp <= claims.iat ||
-        typeof claims.sub !== "string" || !UUID_PATTERN.test(claims.sub) ||
         typeof claims.playerName !== "string" || claims.playerName.trim().length === 0) {
         return null;
     }
+    const isDemoSession = claims.sub === "demo-user" && claims.playerName === "Demo" && claims.demo === true;
+    const isPlayerSession = UUID_PATTERN.test(claims.sub) && claims.demo !== true;
+    if (!isDemoSession && !isPlayerSession) return null;
     if (!env.SESSION_SECRET) throw new Error("Missing SESSION_SECRET Worker secret.");
     const key = await crypto.subtle.importKey(
         "raw",
@@ -283,6 +299,14 @@ async function handleRequest(request, env) {
                 env,
                 Math.floor(Date.now() / 1000)
             );
+        } else if (url.pathname === "/api/login/demo" && request.method === "POST") {
+            if (env.DEMO_FISHING_ENABLED !== "true") {
+                throw Object.assign(new Error("Демо-доступ до риболовлі вимкнено."), {
+                    code: "permission-denied",
+                    status: 403
+                });
+            }
+            responseData = await createDemoSession(env.SESSION_SECRET, Math.floor(Date.now() / 1000));
         } else if (url.pathname === "/api/login/exchange" && request.method === "POST") {
             const body = await request.json();
             responseData = await exchangeMinecraftToken(body?.token, env.DB, env.SESSION_SECRET, Math.floor(Date.now() / 1000));
@@ -294,9 +318,9 @@ async function handleRequest(request, env) {
                     headers: originHeaders
                 });
             }
-            const now = Date.now();
-            const world = await getWorld(env.DB, now);
             if (url.pathname === "/api/fishing/state" && request.method === "GET") {
+                const now = Date.now();
+                const world = await getWorld(env.DB, now);
                 const player = await refreshPlayerState(env.DB, uid, now);
                 responseData = {
                     player: publicPlayer(player),
@@ -304,6 +328,8 @@ async function handleRequest(request, env) {
                     catalog: publicCatalog()
                 };
             } else if (url.pathname === "/api/fishing/action" && request.method === "POST") {
+                const now = Date.now();
+                const world = await getWorld(env.DB, now);
                 const body = await request.json();
                 const result = await commitAction(env.DB, uid, body?.action, body?.payload || {}, now, world);
                 const row = await env.DB.prepare(`SELECT player_json FROM ${FISHING_TABLE} WHERE uid = ?`).bind(uid).first();
@@ -313,6 +339,9 @@ async function handleRequest(request, env) {
                     result: result.result,
                     world: publicWorld(world, now)
                 };
+            } else if (url.pathname === "/api/fishing/reset" && request.method === "POST") {
+                await env.DB.prepare(`DELETE FROM ${FISHING_TABLE} WHERE uid = ?`).bind(uid).run();
+                responseData = { deleted: true };
             } else {
                 return apiError(404, "not-found", "Маршрут API не знайдено.");
             }

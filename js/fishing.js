@@ -660,11 +660,29 @@ setInterval(() => {
 }, 1000);
 
 const isDemo = sessionStorage.getItem("isDemo") === "true";
-if (isDemo ||
-    !sessionStorage.getItem(SITE_SESSION_KEY) ||
-    !sessionStorage.getItem("uuid") ||
-    sessionStorage.getItem("uuid") === "demo-user") {
-    showLoginRequired(false, isDemo);
+const isDemoPlayer = isDemo || sessionStorage.getItem("uuid") === "demo-user";
+if (isDemoPlayer) {
+    elements.fishingAuthRequired.hidden = true;
+    elements.fishingLoading.hidden = false;
+    fetch(`${CLOUDFLARE_API_URL}/api/login/demo`, { method: "POST" })
+        .then(async response => {
+            const result = await response.json();
+            if (!response.ok) {
+                const error = new Error(result.error?.message || "Не вдалося відкрити демо-доступ до риболовлі.");
+                error.code = result.error?.code || "unknown";
+                throw error;
+            }
+            sessionStorage.setItem(SITE_SESSION_KEY, result.sessionToken);
+            return loadState();
+        })
+        .catch(error => {
+            console.error("Не вдалося відкрити демо-доступ до риболовлі:", error);
+            elements.fishingLoading.hidden = true;
+            elements.fishingLoadErrorText.textContent = error.message || "Не вдалося відкрити демо-доступ до риболовлі.";
+            elements.fishingLoadError.hidden = false;
+        });
+} else if (!sessionStorage.getItem(SITE_SESSION_KEY) || !sessionStorage.getItem("uuid")) {
+    showLoginRequired();
 } else {
     loadState();
 }
