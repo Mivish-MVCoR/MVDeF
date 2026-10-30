@@ -358,6 +358,9 @@ export function buyEquipment(player, slot, itemId, quantity = 1, now = Date.now(
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 50) {
         fail("invalid-argument", "Кількість має бути від 1 до 50.");
     }
+    if (Object.keys(player.equipment || {}).length === 0) {
+        fail("failed-precondition", "Спершу придбай стартовий комплект.");
+    }
     if (player.activeAttempt) fail("failed-precondition", "Не можна купувати спорядження під час риболовлі.");
     const totalPrice = item.price * quantity;
     if (player.wallet < totalPrice) fail("failed-precondition", "Недостатньо монет для покупки.");

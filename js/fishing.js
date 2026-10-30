@@ -14,7 +14,7 @@ const elements = Object.fromEntries([
     "fatigueProgress", "reelBtn", "stopFightBtn", "fishingResultPanel", "fishingResultTitle",
     "fishingResultText", "equipmentList", "baitCount", "fishingXp", "fishingXpProgress",
     "fishingXpNext", "fishingCatchCount", "fishingBestCatch", "catchCount", "sellAllBtn",
-    "fishInventory", "collectionCount", "fishCollection", "marketColumns",
+    "fishInventory", "collectionCount", "fishCollection", "marketColumns", "marketLockOverlay",
 ].map(id => [id, document.getElementById(id)]));
 
 let player = null;
@@ -220,7 +220,7 @@ function renderMarket() {
             buy.textContent = `Купити · ${numberFormat.format(item.price)} монет`;
             buy.dataset.marketSlot = slot;
             buy.dataset.marketItemId = id;
-            buy.disabled = busy || Boolean(player.activeAttempt);
+            buy.disabled = busy || Boolean(player.activeAttempt) || !hasStartingEquipment();
             let quantityInput = null;
             let quantityOutput = null;
             card.append(name, detail);
@@ -245,7 +245,7 @@ function renderMarket() {
                 quantityOutput.htmlFor = quantityInput.id;
                 quantityOutput.textContent = "1";
                 quantityHeading.append(quantityLabel, quantityOutput);
-                quantityInput.disabled = busy || Boolean(player.activeAttempt);
+                quantityInput.disabled = busy || Boolean(player.activeAttempt) || !hasStartingEquipment();
                 quantityControl.append(quantityHeading, quantityInput);
                 quantityInput.addEventListener("input", () => {
                     const quantity = Number(quantityInput.value);
@@ -268,6 +268,21 @@ function renderMarket() {
         elements.marketColumns.append(column);
     }
     marketRendered = true;
+}
+
+function hasStartingEquipment() {
+    return Object.keys(player?.equipment || {}).length > 0;
+}
+
+function updateMarketState() {
+    const locked = !hasStartingEquipment();
+    elements.marketLockOverlay.hidden = !locked;
+    elements.marketColumns.querySelectorAll("button[data-market-slot]").forEach(button => {
+        button.disabled = busy || Boolean(player.activeAttempt) || locked;
+    });
+    elements.marketColumns.querySelectorAll("input[data-market-quantity]").forEach(input => {
+        input.disabled = busy || Boolean(player.activeAttempt) || locked;
+    });
 }
 
 function renderSpecimen(specimen, collection = false) {
@@ -459,12 +474,7 @@ function renderGameStage() {
     elements.hookBtn.dataset.ready = String(attempt?.stage === "hook");
     elements.hookBtn.textContent = attempt?.stage === "hook" ? "ПІДСІКАТИ ЗАРАЗ!" : "Підсікти";
     elements.venueSelect.disabled = busy || Boolean(attempt);
-    elements.marketColumns.querySelectorAll("button[data-market-slot]").forEach(button => {
-        button.disabled = busy || Boolean(attempt);
-    });
-    elements.marketColumns.querySelectorAll("input[data-market-quantity]").forEach(input => {
-        input.disabled = busy || Boolean(attempt);
-    });
+    updateMarketState();
     elements.reelBtn.disabled = busy || attempt?.stage !== "fight";
     elements.stopFightBtn.disabled = busy || attempt?.stage !== "fight";
     elements.fishingScene.dataset.stage = attempt?.stage || "idle";

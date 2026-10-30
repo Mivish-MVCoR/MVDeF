@@ -77,6 +77,21 @@ test("first-time player receives one 500-coin starter balance and buys a durable
     );
 });
 
+test("new players cannot buy shop items before purchasing the starter kit", () => {
+    const player = createPlayer(100);
+    assert.throws(
+        () => buyEquipment(player, "bait", "standard", 1, 101),
+        error => error instanceof FishingError && error.code === "failed-precondition"
+    );
+
+    buyStarterKit(player, 102);
+    assert.equal(Object.keys(player.equipment).length, 4);
+    player.wallet = 100;
+    buyEquipment(player, "bait", "standard", 1, 103);
+    assert.equal(player.bait.standard, 51);
+    assert.equal(player.wallet, 95);
+});
+
 test("starter purchases, venue gates, bait and inventory capacity are enforced server-side", () => {
     const player = readyPlayer();
     assert.throws(

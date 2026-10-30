@@ -1094,6 +1094,8 @@ html[data-theme="light"] .fishing-item-button {
 
 .fishing-market {
     grid-area: market;
+    position: relative;
+    isolation: isolate;
 }
 
 .fishing-market-columns {
@@ -1174,6 +1176,25 @@ html[data-theme="light"] .fishing-item-button {
     min-height: 34px;
     padding: 5px;
     font-size: 0.66rem;
+}
+
+.market-lock-overlay {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    border-radius: inherit;
+    background: rgba(0, 0, 0, 0.72);
+    color: var(--green);
+    font-size: clamp(1rem, 2vw, 1.35rem);
+    font-weight: 750;
+    text-align: center;
+}
+
+.market-lock-overlay[hidden] {
+    display: none;
 }
 
 @media (max-width: 760px) {

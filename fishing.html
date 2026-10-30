@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#101713">
     <title>MVDeF — Риболовля</title>
     <link rel="stylesheet" href="css/portal.css">
-    <link rel="stylesheet" href="css/fishing.css?v=fishing-inventory-actions">
+    <link rel="stylesheet" href="css/fishing.css?v=fishing-starter-market-lock">
     <script src="js/theme.js" defer></script>
 </head>
 <body>
@@ -236,12 +236,15 @@
                     </div>
                 </div>
                 <div id="marketColumns" class="fishing-market-columns"></div>
+                <div id="marketLockOverlay" class="market-lock-overlay" role="status" hidden>
+                    Спочатку купи «Стартовий комплект»
+                </div>
             </section>
         </div>
 
     </main>
 
-    <script type="module" src="js/fishing.js?v=fishing-inventory-actions"></script>
+    <script type="module" src="js/fishing.js?v=fishing-starter-market-lock"></script>
     <script type="module" src="js/logout.js"></script>
 </body>
 </html>
