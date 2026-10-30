@@ -156,9 +156,20 @@
 .fishing-layout {
     display: grid;
     grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.85fr);
+    grid-template-areas:
+        "scene equipment"
+        "catch stats"
+        "collection collection"
+        "market market";
     align-items: start;
     gap: 16px;
 }
+
+.fishing-scene-card { grid-area: scene; }
+.fishing-side-panels { grid-area: equipment; }
+.fishing-stats-card { grid-area: stats; }
+.catch-card { grid-area: catch; }
+.collection-card { grid-area: collection; }
 
 .fishing-scene-card,
 .catch-card,
@@ -568,11 +579,6 @@
 .fishing-cast-button:disabled {
     cursor: not-allowed;
     opacity: 0.5;
-}
-
-.fishing-side-panels {
-    display: grid;
-    gap: 16px;
 }
 
 .equipment-list,
@@ -1087,7 +1093,7 @@ html[data-theme="light"] .fishing-item-button {
 }
 
 .fishing-market {
-    grid-column: 1 / -1;
+    grid-area: market;
 }
 
 .fishing-market-columns {
@@ -1173,19 +1179,19 @@ html[data-theme="light"] .fishing-item-button {
 @media (max-width: 760px) {
     .fishing-layout {
         grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "scene"
+            "equipment"
+            "stats"
+            "catch"
+            "collection"
+            "market";
     }
 
     .fishing-page {
         width: min(calc(100% - 32px), 1440px);
     }
 
-    .fishing-scene-card {
-        grid-row: auto;
-    }
-
-    .fishing-side-panels {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
 }
 
 @media (max-width: 520px) {
@@ -1210,10 +1216,6 @@ html[data-theme="light"] .fishing-item-button {
     }
 
     .fishing-profile-chip strong { font-size: 0.75rem; }
-
-    .fishing-side-panels {
-        grid-template-columns: minmax(0, 1fr);
-    }
 
     .fishing-scene {
         min-height: 270px;

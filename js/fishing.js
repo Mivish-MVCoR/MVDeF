@@ -309,7 +309,6 @@ function makeActionButton(label, action, specimenId) {
 function renderInventory() {
     elements.catchCount.textContent = `${player.inventory.length} / ${catalog.rules.inventoryCapacity}`;
     elements.collectionCount.textContent = `${player.collection.length} / ${catalog.rules.collectionCapacity}`;
-    elements.sellAllBtn.disabled = busy || player.inventory.length === 0 || Boolean(player.activeAttempt);
     elements.fishInventory.replaceChildren();
     elements.fishCollection.replaceChildren();
 
@@ -333,6 +332,17 @@ function renderInventory() {
         for (const specimen of player.collection) {
             elements.fishCollection.append(renderSpecimen(specimen, true));
         }
+    }
+    updateInventoryActionState();
+}
+
+function updateInventoryActionState() {
+    const disabled = busy || Boolean(player.activeAttempt);
+    elements.sellAllBtn.disabled = disabled || player.inventory.length === 0;
+    for (const inventory of [elements.fishInventory, elements.fishCollection]) {
+        inventory.querySelectorAll("button[data-action][data-specimen-id]").forEach(button => {
+            button.disabled = disabled;
+        });
     }
 }
 
@@ -657,6 +667,7 @@ async function performAction(action, payload = {}, { quiet = false } = {}) {
     } finally {
         busy = false;
         renderGameStage();
+        updateInventoryActionState();
     }
 }
 

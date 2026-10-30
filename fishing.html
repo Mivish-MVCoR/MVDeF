@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#101713">
     <title>MVDeF — Риболовля</title>
     <link rel="stylesheet" href="css/portal.css">
-    <link rel="stylesheet" href="css/fishing.css?v=fishing-market-quantity">
+    <link rel="stylesheet" href="css/fishing.css?v=fishing-inventory-actions">
     <script src="js/theme.js" defer></script>
 </head>
 <body>
@@ -185,23 +185,23 @@
                     </div>
                     <div id="equipmentList" class="equipment-list"></div>
                 </section>
-
-                <section class="card fishing-stats-card" aria-labelledby="fishingStatsTitle">
-                    <div class="fishing-card-heading">
-                        <div>
-                            <p class="card-label">ТВІЙ ПРОГРЕС</p>
-                            <h2 id="fishingStatsTitle">Статистика</h2>
-                        </div>
-                    </div>
-                    <div class="fishing-stats">
-                        <div><span>Усього досвіду</span><strong id="fishingXp">—</strong></div>
-                        <div><span>Прогрес рівня</span><strong id="fishingXpProgress">—</strong></div>
-                        <div><span>До наступного рівня</span><strong id="fishingXpNext">—</strong></div>
-                        <div><span>Усього виловлено</span><strong id="fishingCatchCount">0</strong></div>
-                        <div><span>Найкращий улов</span><strong id="fishingBestCatch">—</strong></div>
-                    </div>
-                </section>
             </aside>
+
+            <section class="card fishing-stats-card" aria-labelledby="fishingStatsTitle">
+                <div class="fishing-card-heading">
+                    <div>
+                        <p class="card-label">ТВІЙ ПРОГРЕС</p>
+                        <h2 id="fishingStatsTitle">Статистика</h2>
+                    </div>
+                </div>
+                <div class="fishing-stats">
+                    <div><span>Усього досвіду</span><strong id="fishingXp">—</strong></div>
+                    <div><span>Прогрес рівня</span><strong id="fishingXpProgress">—</strong></div>
+                    <div><span>До наступного рівня</span><strong id="fishingXpNext">—</strong></div>
+                    <div><span>Усього виловлено</span><strong id="fishingCatchCount">0</strong></div>
+                    <div><span>Найкращий улов</span><strong id="fishingBestCatch">—</strong></div>
+                </div>
+            </section>
 
             <section class="card catch-card" aria-labelledby="catchTitle">
                 <div class="fishing-card-heading">
@@ -230,10 +230,10 @@
 
             <section id="fishingMarket" class="card fishing-market" aria-labelledby="marketTitle">
                 <div class="fishing-card-heading">
-                <div>
-                    <p class="card-label">УСЕ СПОРЯДЖЕННЯ</p>
-                    <h2 id="marketTitle">Крамниця</h2>
-                </div>
+                    <div>
+                        <p class="card-label">УСЕ СПОРЯДЖЕННЯ</p>
+                        <h2 id="marketTitle">Крамниця</h2>
+                    </div>
                 </div>
                 <div id="marketColumns" class="fishing-market-columns"></div>
             </section>
@@ -241,7 +241,7 @@
 
     </main>
 
-    <script type="module" src="js/fishing.js?v=fishing-market-quantity"></script>
+    <script type="module" src="js/fishing.js?v=fishing-inventory-actions"></script>
     <script type="module" src="js/logout.js"></script>
 </body>
 </html>
