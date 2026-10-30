@@ -344,6 +344,12 @@ body {
     background: rgba(237, 27, 47, 0.08);
 }
 
+.danger-zone-reset-button {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: min(100%, 640px);
+}
+
 .delete-empire-dialog {
     width: min(520px, calc(100vw - 32px));
     padding: 0;
@@ -409,6 +415,63 @@ body {
 .delete-empire-actions button:disabled {
     cursor: wait;
     opacity: 0.6;
+}
+
+.fishing-reset-card {
+    position: relative;
+}
+
+.fishing-reset-card h2 {
+    padding-right: 32px;
+}
+
+.fishing-reset-card label {
+    color: #d0d6d1;
+    line-height: 1.5;
+}
+
+.fishing-reset-card label strong {
+    color: #fff;
+    overflow-wrap: anywhere;
+}
+
+.fishing-reset-empire-input {
+    min-height: 44px;
+    padding: 9px 11px;
+    border: 1px solid #777f79;
+    border-radius: 5px;
+    background: #0a0e17;
+    color: #e0e0e0;
+    font: inherit;
+}
+
+.fishing-reset-empire-input:focus {
+    outline: 2px solid #ed5959;
+    outline-offset: 1px;
+}
+
+.fishing-reset-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #777f79;
+    border-radius: 5px;
+    background: transparent;
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.delete-empire-confirm:disabled {
+    border-color: #69716d;
+    background: #555b58 !important;
+    color: #c1c5c3;
+    cursor: not-allowed;
+    opacity: 1 !important;
+    box-shadow: none;
 }
 
 @media (max-width: 520px) {
@@ -1824,6 +1887,31 @@ html[data-theme="light"] .delete-empire-confirm {
     border-color: #c51d30;
     background: #fff0e4 !important;
     color: #b42332;
+}
+
+html[data-theme="light"] .fishing-reset-card label {
+    color: #39463d;
+}
+
+html[data-theme="light"] .fishing-reset-card label strong {
+    color: #202a22;
+}
+
+html[data-theme="light"] .fishing-reset-empire-input {
+    border-color: #7b877e;
+    background: #ffffff;
+    color: #202a22;
+}
+
+html[data-theme="light"] .fishing-reset-close {
+    border-color: #7b877e;
+    color: #202a22;
+}
+
+html[data-theme="light"] .delete-empire-confirm:disabled {
+    border-color: #a4aaa6;
+    background: #e0e3e1 !important;
+    color: #686e6a;
 }
 
 @media (max-width: 680px) {

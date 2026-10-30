@@ -1,7 +1,5 @@
 import { xpToNextLevel } from "../functions/src/fishing/catalog.js";
 import { CLOUDFLARE_API_URL, SITE_SESSION_KEY } from "./cloudflare-config.js";
-import { db } from "./firebase.js";
-import { get, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const elements = Object.fromEntries([
     "fishingAuthRequired", "fishingAuthMessage", "fishingLoading", "fishingLoadError",
@@ -18,9 +16,6 @@ const elements = Object.fromEntries([
     "buyEquipmentBtn", "baitSelect", "baitQuantity", "buyBaitBtn", "fishingXp", "fishingXpProgress",
     "fishingXpNext", "fishingCatchCount", "fishingBestCatch", "catchCount", "sellAllBtn",
     "fishInventory", "collectionCount", "fishCollection", "desktopMarketColumns",
-    "fishingResetSection", "fishingResetUnavailable", "openFishingResetBtn",
-    "fishingResetDialog", "fishingResetEmpireInput", "fishingResetError",
-    "closeFishingResetBtn", "cancelFishingResetBtn", "confirmFishingResetBtn"
 ].map(id => [id, document.getElementById(id)]));
 
 let player = null;
@@ -33,7 +28,6 @@ let lastResultTimestamp = null;
 let pullDirection = null;
 let joystickPointerId = null;
 let busy = false;
-let empireName = "";
 let desktopMarketRendered = false;
 
 const numberFormat = new Intl.NumberFormat("uk-UA");
@@ -204,7 +198,7 @@ function populateShop() {
 }
 
 function formatEquipmentDetails(slot, item) {
-    if (slot === "rod") return `До ${item.maxFishMassKg} кг`;
+    if (slot === "rod") return `До ${item.maxFishMassKg} кг · ризик розриву ${Math.round(item.breakChance * 100)}% після 6 рівня`;
     if (slot === "line") return `Навантаження до ${item.loadKg} кг`;
     if (slot === "reel") return `Швидкість змотування +${item.reelBonusMps} м/с`;
     if (slot === "bait") return `${numberFormat.format(item.price)} монет за 1 шт.`;
@@ -444,7 +438,6 @@ function renderGameStage() {
     elements.baitQuantity.disabled = busy || Boolean(attempt);
     elements.buyBaitBtn.disabled = busy || Boolean(attempt);
     elements.buyEquipmentBtn.disabled = busy || Boolean(attempt);
-    elements.openFishingResetBtn.disabled = busy;
     elements.desktopMarketColumns.querySelectorAll("button[data-market-slot]").forEach(button => {
         button.disabled = busy || Boolean(attempt);
     });
@@ -614,7 +607,6 @@ async function loadState() {
         elements.fishingLoading.hidden = true;
         elements.fishingLayout.hidden = false;
         elements.fishingProfileChip.hidden = false;
-        return true;
     } catch (error) {
         console.error("Не вдалося завантажити рибальський табір:", error);
         if (error?.code === "unauthenticated") {
@@ -624,7 +616,6 @@ async function loadState() {
             elements.fishingLoadErrorText.textContent = readableError(error);
             elements.fishingLoadError.hidden = false;
         }
-        return false;
     }
 }
 
@@ -741,88 +732,9 @@ elements.sellAllBtn.addEventListener("click", () => {
 });
 elements.retryFishingBtn.addEventListener("click", loadState);
 
-async function loadEmpireName() {
-    const uuid = sessionStorage.getItem("uuid");
-    if (!uuid || uuid === "demo-user") return;
-    try {
-        const empires = await get(ref(db, "mvdef/empires"));
-        empires.forEach(child => {
-            if (child.val()?.ownerUuid === uuid) empireName = child.val()?.name?.trim() || "";
-        });
-        if (!empireName) return;
-        elements.fishingResetEmpireInput.placeholder = empireName;
-        elements.fishingResetSection.hidden = false;
-    } catch (error) {
-        console.error("Не вдалося завантажити назву імперії для підтвердження скидання:", error);
-        elements.fishingResetUnavailable.textContent =
-            "Не вдалося завантажити назву імперії. Скидання прогресу тимчасово недоступне.";
-        elements.fishingResetUnavailable.hidden = false;
-    }
-}
-
-function closeFishingResetDialog() {
-    elements.fishingResetDialog.close();
-    elements.fishingResetEmpireInput.value = "";
-    elements.fishingResetError.textContent = "";
-    elements.confirmFishingResetBtn.disabled = true;
-}
-
-elements.openFishingResetBtn.addEventListener("click", () => {
-    if (!empireName || busy) return;
-    elements.fishingResetEmpireInput.value = "";
-    elements.fishingResetEmpireInput.placeholder = empireName;
-    elements.fishingResetError.textContent = "";
-    elements.confirmFishingResetBtn.disabled = true;
-    elements.fishingResetDialog.showModal();
-    elements.fishingResetEmpireInput.focus();
-});
-elements.closeFishingResetBtn.addEventListener("click", closeFishingResetDialog);
-elements.cancelFishingResetBtn.addEventListener("click", closeFishingResetDialog);
-elements.fishingResetEmpireInput.addEventListener("input", () => {
-    elements.confirmFishingResetBtn.disabled =
-        elements.fishingResetEmpireInput.value.trim() !== empireName;
-});
-elements.confirmFishingResetBtn.addEventListener("click", async () => {
-    if (busy || elements.fishingResetEmpireInput.value.trim() !== empireName) return;
-    busy = true;
-    elements.confirmFishingResetBtn.disabled = true;
-    elements.confirmFishingResetBtn.textContent = "Скидаємо…";
-    elements.fishingResetError.textContent = "";
-    let profileDeleted = false;
-    try {
-        await apiCall("/api/fishing/reset", { method: "POST" });
-        profileDeleted = true;
-        clearWaitingTimers();
-        if (hookTimeout) clearTimeout(hookTimeout);
-        if (fightTicker) clearInterval(fightTicker);
-        hookTimeout = null;
-        fightTicker = null;
-        lastResultTimestamp = null;
-        const loaded = await loadState();
-        if (!loaded) {
-            throw new Error("Профіль скинуто, але новий стан не завантажився. Спробуй оновити сторінку.");
-        }
-        closeFishingResetDialog();
-        showNotice("Рибальський прогрес скинуто.");
-    } catch (error) {
-        console.error("Не вдалося скинути рибальський прогрес:", error);
-        elements.fishingResetError.textContent = profileDeleted
-            ? error.message
-            : readableError(error);
-    } finally {
-        busy = false;
-        elements.confirmFishingResetBtn.textContent = "Дійсно видалити";
-        elements.confirmFishingResetBtn.disabled =
-            elements.fishingResetEmpireInput.value.trim() !== empireName;
-        if (player && catalog && world) renderGameStage();
-    }
-});
-
 setInterval(() => {
     if (world) renderWorld();
 }, 1000);
-
-loadEmpireName();
 
 const isDemo = sessionStorage.getItem("isDemo") === "true";
 const isDemoPlayer = isDemo || sessionStorage.getItem("uuid") === "demo-user";

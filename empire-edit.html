@@ -98,6 +98,9 @@
             <div class="danger-zone-actions">
                 <button class="danger-zone-button" id="abdicateButton" type="button">Покинути престол</button>
                 <button class="danger-zone-button danger-zone-button-delete" id="capitulateButton" type="button">Капітулювати</button>
+                <button class="danger-zone-button danger-zone-button-delete danger-zone-reset-button" id="openFishingResetButton" type="button">
+                    Зложити вудочки
+                </button>
             </div>
         </section>
     </main>
@@ -109,6 +112,20 @@
             <div class="delete-empire-actions">
                 <button class="delete-empire-cancel" id="cancelDeleteEmpire" type="button">Скасувати</button>
                 <button class="delete-empire-confirm" id="confirmDeleteEmpire" type="button"></button>
+            </div>
+        </form>
+    </dialog>
+    <dialog class="delete-empire-dialog" id="fishingResetDialog" aria-labelledby="fishingResetTitle">
+        <form method="dialog" class="delete-empire-card fishing-reset-card">
+            <button class="fishing-reset-close" id="closeFishingReset" type="button" aria-label="Закрити">×</button>
+            <h2 id="fishingResetTitle">Дійсно скинути рибальський прогрес?</h2>
+            <p>Буде видалено лише профіль риболовлі, спорядження, улов та прогрес. Дані правління й інші дані не зміняться.</p>
+            <label for="fishingResetEmpireName">Введи назву свого правління: <strong id="fishingResetEmpireLabel"></strong></label>
+            <input id="fishingResetEmpireName" class="fishing-reset-empire-input" type="text" autocomplete="off">
+            <p class="delete-empire-error" id="fishingResetError" role="alert"></p>
+            <div class="delete-empire-actions">
+                <button class="delete-empire-cancel" id="cancelFishingReset" type="button">Скасувати</button>
+                <button class="delete-empire-confirm" id="confirmFishingReset" type="button" disabled>Дійсно видалити</button>
             </div>
         </form>
     </dialog>

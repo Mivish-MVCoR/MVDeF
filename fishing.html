@@ -253,29 +253,7 @@
             </section>
         </div>
 
-        <section id="fishingResetSection" class="card fishing-reset-section" aria-labelledby="fishingResetTitle" hidden>
-            <p class="card-label">СКИДАННЯ ПРОГРЕСУ</p>
-            <h2 id="fishingResetTitle">Скинути рибальський прогрес</h2>
-            <p>Підтвердження назвою твоєї імперії захищає від випадкового скидання.</p>
-            <button id="openFishingResetBtn" class="fishing-reset-button" type="button">Зложити вудочки</button>
-        </section>
-        <p id="fishingResetUnavailable" class="fishing-reset-unavailable" role="alert" hidden></p>
     </main>
-
-    <dialog id="fishingResetDialog" class="fishing-reset-dialog" aria-labelledby="fishingResetDialogTitle">
-        <form method="dialog" class="fishing-reset-dialog-card">
-            <button id="closeFishingResetBtn" class="fishing-reset-close" type="button" aria-label="Закрити">×</button>
-            <h2 id="fishingResetDialogTitle">Дійсно скинути весь прогрес?</h2>
-            <p>Буде видалено рибальський профіль, спорядження, улов та прогрес. Дані імперії не зміняться.</p>
-            <label for="fishingResetEmpireInput">Введи назву своєї імперії для підтвердження</label>
-            <input id="fishingResetEmpireInput" type="text" autocomplete="off" placeholder="" aria-describedby="fishingResetError">
-            <p id="fishingResetError" class="fishing-reset-error" role="alert"></p>
-            <div class="fishing-reset-dialog-actions">
-                <button id="cancelFishingResetBtn" class="fishing-reset-cancel" type="button">Скасувати</button>
-                <button id="confirmFishingResetBtn" class="fishing-reset-confirm" type="button" disabled>Дійсно видалити</button>
-            </div>
-        </form>
-    </dialog>
 
     <script type="module" src="js/fishing.js?v=fishing-update-hooks-xp-reset"></script>
     <script type="module" src="js/logout.js"></script>

@@ -1,5 +1,6 @@
 import { db } from './firebase.js';
 import { ref, get, push, set, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { CLOUDFLARE_API_URL, SITE_SESSION_KEY } from './cloudflare-config.js';
 
 const uuid = sessionStorage.getItem('uuid');
 const playerName = sessionStorage.getItem('playerName') || 'Гравець';
@@ -196,6 +197,59 @@ async function deleteEmpire() {
     }
 }
 
+function resetFishingInput() {
+    const input = document.getElementById('fishingResetEmpireName');
+    input.value = '';
+    document.getElementById('confirmFishingReset').disabled = true;
+    document.getElementById('fishingResetError').textContent = '';
+}
+
+function openFishingResetConfirmation() {
+    if (!currentEmpire?.name?.trim()) return;
+    resetFishingInput();
+    const empireName = currentEmpire.name.trim();
+    document.getElementById('fishingResetEmpireLabel').textContent = empireName;
+    document.getElementById('fishingResetEmpireName').placeholder = empireName;
+    document.getElementById('fishingResetDialog').showModal();
+    document.getElementById('fishingResetEmpireName').focus();
+}
+
+async function resetFishingProgress() {
+    const expectedName = currentEmpire?.name?.trim();
+    const input = document.getElementById('fishingResetEmpireName');
+    const confirmButton = document.getElementById('confirmFishingReset');
+    const error = document.getElementById('fishingResetError');
+    if (!expectedName || input.value.trim() !== expectedName || confirmButton.disabled) return;
+
+    const token = sessionStorage.getItem(SITE_SESSION_KEY);
+    if (!token) {
+        error.textContent = 'Сеанс входу завершився. Увійди знову та спробуй ще раз.';
+        return;
+    }
+
+    confirmButton.disabled = true;
+    confirmButton.textContent = 'Скидаємо…';
+    document.getElementById('cancelFishingReset').disabled = true;
+    error.textContent = '';
+    try {
+        const response = await fetch(`${CLOUDFLARE_API_URL}/api/fishing/reset`, {
+            method: 'POST',
+            headers: { authorization: `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error?.message || 'Не вдалося скинути рибальський прогрес.');
+        window.location.assign('fishing.html');
+    } catch (resetError) {
+        console.error('Не вдалося скинути рибальський прогрес:', resetError);
+        error.textContent = resetError instanceof Error
+            ? resetError.message
+            : 'Не вдалося скинути рибальський прогрес. Спробуй ще раз.';
+        confirmButton.disabled = input.value.trim() !== expectedName;
+        document.getElementById('cancelFishingReset').disabled = false;
+        confirmButton.textContent = 'Дійсно видалити';
+    }
+}
+
 document.getElementById('government').addEventListener('change', showGovernmentInfo);
 document.getElementById('organizationLevel').addEventListener('change', event => {
     if (mode === 'edit') configureDangerZone(event.target.value);
@@ -211,6 +265,18 @@ if (mode === 'edit') {
         event.preventDefault();
         window.location.replace('cabinet.html');
     });
+    const fishingResetDialog = document.getElementById('fishingResetDialog');
+    const fishingResetInput = document.getElementById('fishingResetEmpireName');
+    const confirmFishingReset = document.getElementById('confirmFishingReset');
+    document.getElementById('openFishingResetButton').addEventListener('click', openFishingResetConfirmation);
+    document.getElementById('closeFishingReset').addEventListener('click', () => fishingResetDialog.close());
+    document.getElementById('cancelFishingReset').addEventListener('click', () => fishingResetDialog.close());
+    fishingResetDialog.addEventListener('close', resetFishingInput);
+    fishingResetInput.addEventListener('input', () => {
+        confirmFishingReset.disabled =
+            fishingResetInput.value.trim() !== currentEmpire?.name?.trim();
+    });
+    confirmFishingReset.addEventListener('click', resetFishingProgress);
 }
 colorInput.addEventListener('input', () => {
     colorValue.textContent = colorInput.value.toUpperCase();

@@ -21,13 +21,13 @@ const WEATHER_CYCLE_EPOCH = Date.UTC(2026, 0, 1);
 
 export const EQUIPMENT = Object.freeze({
     rod: Object.freeze({
-        starter: Object.freeze({ name: "Початкова вудка", price: 100, maxFishMassKg: 2, tensionControl: 0, fatigueBonus: 0 }),
-        light: Object.freeze({ name: "Легка вудка", price: 250, maxFishMassKg: 5, tensionControl: 0.03, fatigueBonus: 0.03 }),
-        universal: Object.freeze({ name: "Універсальна вудка", price: 500, maxFishMassKg: 10, tensionControl: 0.06, fatigueBonus: 0.06 }),
-        medium: Object.freeze({ name: "Середня вудка", price: 1000, maxFishMassKg: 20, tensionControl: 0.09, fatigueBonus: 0.09 }),
-        reinforced: Object.freeze({ name: "Посилена вудка", price: 2000, maxFishMassKg: 35, tensionControl: 0.12, fatigueBonus: 0.12 }),
-        professional: Object.freeze({ name: "Професійна вудка", price: 4000, maxFishMassKg: 50, tensionControl: 0.15, fatigueBonus: 0.15 }),
-        expert: Object.freeze({ name: "Експертна вудка", price: 8000, maxFishMassKg: 70, tensionControl: 0.18, fatigueBonus: 0.18 })
+        starter: Object.freeze({ name: "Початкова вудка", price: 100, maxFishMassKg: 2, breakChance: 0.06, tensionControl: 0, fatigueBonus: 0 }),
+        light: Object.freeze({ name: "Легка вудка", price: 250, maxFishMassKg: 5, breakChance: 0.05, tensionControl: 0.03, fatigueBonus: 0.03 }),
+        universal: Object.freeze({ name: "Універсальна вудка", price: 500, maxFishMassKg: 10, breakChance: 0.04, tensionControl: 0.06, fatigueBonus: 0.06 }),
+        medium: Object.freeze({ name: "Середня вудка", price: 1000, maxFishMassKg: 20, breakChance: 0.03, tensionControl: 0.09, fatigueBonus: 0.09 }),
+        reinforced: Object.freeze({ name: "Посилена вудка", price: 2000, maxFishMassKg: 35, breakChance: 0.02, tensionControl: 0.12, fatigueBonus: 0.12 }),
+        professional: Object.freeze({ name: "Професійна вудка", price: 4000, maxFishMassKg: 50, breakChance: 0.01, tensionControl: 0.15, fatigueBonus: 0.15 }),
+        expert: Object.freeze({ name: "Експертна вудка", price: 8000, maxFishMassKg: 70, breakChance: 0, tensionControl: 0.18, fatigueBonus: 0.18 })
     }),
     line: Object.freeze({
         starter: Object.freeze({ name: "Початкова волосінь", price: 40, loadKg: 3 }),
@@ -255,7 +255,8 @@ function finishAttempt(player, result, now, random, { catchData = null, baitCons
 
     player.attemptsCompleted++;
     if (player.attemptsCompleted >= FISHING_RULES.wear.freeAttempts + 1) {
-        for (const item of Object.values(player.equipment)) {
+        for (const [slot, item] of Object.entries(player.equipment)) {
+            if (slot === "rod" && player.level < 6) continue;
             if (item && item.durability > 0) {
                 item.durability = Math.max(0, item.durability - FISHING_RULES.wear.fixedWearPerAttempt);
             }
@@ -498,7 +499,8 @@ export function hookFish(player, { now = Date.now(), random = Math.random, speci
     const massKg = attempt.fishMassGrams / 1000;
     const rodWear = rod.item.durability / INITIAL_DURABILITY;
     const rodLimitKg = rod.definition.maxFishMassKg * Math.max(0.1, rodWear);
-    if (massKg > rod.definition.maxFishMassKg) {
+    if (player.level >= 6 && massKg > rod.definition.maxFishMassKg &&
+        random() < rod.definition.breakChance) {
         rod.item.durability = 0;
         finishAttempt(player, { outcome: "rod-broken", fishName: fish.name }, now, random);
         player.updatedAt = now;
@@ -576,7 +578,7 @@ export function advanceFight(player, { tension, reeling, now = Date.now(), rando
     } else if (red) {
         applyAdditionalWear(player, "line", 120 * 0.02 * elapsed);
         applyAdditionalWear(player, "reel", 120 * 0.02 * elapsed);
-        applyAdditionalWear(player, "rod", 2 * elapsed);
+        if (player.level >= 6) applyAdditionalWear(player, "rod", 2 * elapsed);
     }
 
     const lineWear = player.equipment.line.durability / INITIAL_DURABILITY;
@@ -584,7 +586,8 @@ export function advanceFight(player, { tension, reeling, now = Date.now(), rando
         ? Math.min(0.35, 0.03 * Math.max(1, loadRatio) / Math.max(0.15, lineWear))
         : Math.max(0, loadRatio - 0.8) * 0.04 / Math.max(0.15, lineWear);
     const lineBreakChance = 1 - (1 - Math.min(0.99, breakChancePerSecond)) ** elapsed;
-    if (player.equipment.rod.durability <= 0 || player.equipment.line.durability <= 0 ||
+    if ((player.level >= 6 && player.equipment.rod.durability <= 0) ||
+        player.equipment.line.durability <= 0 ||
         player.equipment.reel.durability <= 0 || random() < lineBreakChance) {
         if (random() < 0.35) applyAdditionalWear(player, "line", player.equipment.line.durability);
         finishAttempt(player, { outcome: "broken-equipment" }, now, random);

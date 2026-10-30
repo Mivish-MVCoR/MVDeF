@@ -202,10 +202,28 @@ test("hook weight ranges use the configured rare catch odds and break limits", (
     assert.equal(brokenStarter.lastResult.outcome, "hook-broken");
     assert.equal(brokenStarter.equipment.hook.durability, 0);
 
-    const eliteWithLargeFish = playerWithHookedFish("elite", "blue-shark", 100_000);
-    hookFish(eliteWithLargeFish, { now: 100, random: deterministicRandom(0), specimenId: "elite-fish" });
-    assert.equal(eliteWithLargeFish.lastResult.outcome, "rod-broken");
-    assert.equal(eliteWithLargeFish.equipment.hook.durability, 120);
+    const protectedStarter = playerWithHookedFish("elite", "bream", 3000);
+    hookFish(protectedStarter, { now: 100, random: deterministicRandom(0.05), specimenId: "protected-fish" });
+    assert.equal(protectedStarter.activeAttempt.stage, "fight");
+    assert.equal(protectedStarter.equipment.rod.durability, 120);
+
+    const vulnerableStarter = playerWithHookedFish("elite", "bream", 3000);
+    vulnerableStarter.level = 6;
+    hookFish(vulnerableStarter, { now: 100, random: deterministicRandom(0.05), specimenId: "vulnerable-fish" });
+    assert.equal(vulnerableStarter.lastResult.outcome, "rod-broken");
+    assert.equal(vulnerableStarter.equipment.rod.durability, 0);
+});
+
+test("rod break probabilities decrease by tier and rod damage is disabled before level 6", () => {
+    assert.deepEqual(
+        Object.values(EQUIPMENT.rod).map(rod => rod.breakChance),
+        [0.06, 0.05, 0.04, 0.03, 0.02, 0.01, 0]
+    );
+
+    const protectedPlayer = playerWithHookedFish("elite", "bream", 3000);
+    protectedPlayer.attemptsCompleted = 4;
+    hookFish(protectedPlayer, { now: 100, random: deterministicRandom(0.99), specimenId: "wear-protected" });
+    assert.equal(protectedPlayer.equipment.rod.durability, 120);
 });
 
 test("an unhooked bite escapes immediately when the one-second window expires", () => {
