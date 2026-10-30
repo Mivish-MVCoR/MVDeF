@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#101713">
     <title>MVDeF — Риболовля</title>
     <link rel="stylesheet" href="css/portal.css">
-    <link rel="stylesheet" href="css/fishing.css">
+    <link rel="stylesheet" href="css/fishing.css?v=fishing-market-quantity">
     <script src="js/theme.js" defer></script>
 </head>
 <body>
@@ -184,20 +184,6 @@
                         <span id="baitCount" class="catch-count">Наживка —</span>
                     </div>
                     <div id="equipmentList" class="equipment-list"></div>
-                    <div id="equipmentShop" class="equipment-shop">
-                        <label for="equipmentSelect">Купити спорядження</label>
-                        <div class="fishing-shop-row">
-                            <select id="equipmentSelect" aria-label="Предмет спорядження" disabled></select>
-                            <button id="buyEquipmentBtn" class="btn-secondary fishing-secondary-button" type="button" disabled>Купити</button>
-                        </div>
-                        <small>Нова деталь замінює встановлену й має 120 одиниць міцності.</small>
-                    </div>
-                    <div class="fishing-shop-row bait-shop-row">
-                        <label for="baitSelect">Наживка</label>
-                        <select id="baitSelect" aria-label="Тип наживки" disabled></select>
-                        <input id="baitQuantity" type="number" min="1" max="100" value="10" aria-label="Кількість наживки" disabled>
-                        <button id="buyBaitBtn" class="btn-secondary fishing-secondary-button" type="button" disabled>Купити</button>
-                    </div>
                 </section>
 
                 <section class="card fishing-stats-card" aria-labelledby="fishingStatsTitle">
@@ -242,20 +228,20 @@
                 <div id="fishCollection" class="fish-inventory"></div>
             </section>
 
-            <section id="desktopEquipmentMarket" class="card desktop-equipment-market" aria-labelledby="desktopMarketTitle">
+            <section id="fishingMarket" class="card fishing-market" aria-labelledby="marketTitle">
                 <div class="fishing-card-heading">
-                    <div>
-                        <p class="card-label">УСЕ СПОРЯДЖЕННЯ</p>
-                        <h2 id="desktopMarketTitle">Крамниця</h2>
-                    </div>
+                <div>
+                    <p class="card-label">УСЕ СПОРЯДЖЕННЯ</p>
+                    <h2 id="marketTitle">Крамниця</h2>
                 </div>
-                <div id="desktopMarketColumns" class="desktop-market-columns"></div>
+                </div>
+                <div id="marketColumns" class="fishing-market-columns"></div>
             </section>
         </div>
 
     </main>
 
-    <script type="module" src="js/fishing.js?v=fishing-update-hooks-xp-reset"></script>
+    <script type="module" src="js/fishing.js?v=fishing-market-quantity"></script>
     <script type="module" src="js/logout.js"></script>
 </body>
 </html>

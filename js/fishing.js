@@ -12,10 +12,9 @@ const elements = Object.fromEntries([
     "fishingStageDescription", "fishingHookPanel", "hookBtn",
     "fishingFightPanel", "fightDistance", "fatigueOutput",
     "fatigueProgress", "reelBtn", "stopFightBtn", "fishingResultPanel", "fishingResultTitle",
-    "fishingResultText", "equipmentList", "baitCount", "equipmentShop", "equipmentSelect",
-    "buyEquipmentBtn", "baitSelect", "baitQuantity", "buyBaitBtn", "fishingXp", "fishingXpProgress",
+    "fishingResultText", "equipmentList", "baitCount", "fishingXp", "fishingXpProgress",
     "fishingXpNext", "fishingCatchCount", "fishingBestCatch", "catchCount", "sellAllBtn",
-    "fishInventory", "collectionCount", "fishCollection", "desktopMarketColumns",
+    "fishInventory", "collectionCount", "fishCollection", "marketColumns",
 ].map(id => [id, document.getElementById(id)]));
 
 let player = null;
@@ -28,7 +27,7 @@ let lastResultTimestamp = null;
 let pullDirection = null;
 let joystickPointerId = null;
 let busy = false;
-let desktopMarketRendered = false;
+let marketRendered = false;
 
 const numberFormat = new Intl.NumberFormat("uk-UA");
 const gameResultText = {
@@ -177,26 +176,6 @@ function renderEquipment() {
     elements.baitCount.textContent = `Наживка ${numberFormat.format(currentBaitTotal())}`;
 }
 
-function populateShop() {
-    elements.equipmentSelect.replaceChildren();
-    for (const slot of ["rod", "line", "reel", "hook"]) {
-        for (const [id, item] of Object.entries(catalog.equipment[slot])) {
-            const option = document.createElement("option");
-            option.value = `${slot}:${id}`;
-            option.textContent = `${item.name} · ${numberFormat.format(item.price)} монет`;
-            elements.equipmentSelect.append(option);
-        }
-    }
-
-    elements.baitSelect.replaceChildren();
-    for (const [id, item] of Object.entries(catalog.equipment.bait)) {
-        const option = document.createElement("option");
-        option.value = id;
-        option.textContent = `${item.name} · ${numberFormat.format(item.price)} монет/шт.`;
-        elements.baitSelect.append(option);
-    }
-}
-
 function formatEquipmentDetails(slot, item) {
     if (slot === "rod") return `До ${item.maxFishMassKg} кг · ризик розриву ${Math.round(item.breakChance * 100)}% після 6 рівня`;
     if (slot === "line") return `Навантаження до ${item.loadKg} кг`;
@@ -211,9 +190,9 @@ function formatEquipmentDetails(slot, item) {
     return `Звичайна вага: ${numberFormat.format(item.minCatchMassGrams)}–${upperLimit}; поза нею ${Math.round(item.outsideRangeCatchChance * 100)}%; ${breakLimit}`;
 }
 
-function renderDesktopMarket() {
-    if (desktopMarketRendered) return;
-    elements.desktopMarketColumns.replaceChildren();
+function renderMarket() {
+    if (marketRendered) return;
+    elements.marketColumns.replaceChildren();
     const slotLabels = {
         rod: "Вудки",
         line: "Волосінь",
@@ -223,14 +202,14 @@ function renderDesktopMarket() {
     };
     for (const slot of Object.keys(slotLabels)) {
         const column = document.createElement("section");
-        column.className = "desktop-market-column";
+        column.className = "fishing-market-column";
         const heading = document.createElement("h3");
         heading.textContent = slotLabels[slot];
         const items = document.createElement("div");
-        items.className = "desktop-market-items";
+        items.className = "fishing-market-items";
         for (const [id, item] of Object.entries(catalog.equipment[slot])) {
             const card = document.createElement("article");
-            card.className = "desktop-market-item";
+            card.className = "fishing-market-item";
             const name = document.createElement("strong");
             name.textContent = item.name;
             const detail = document.createElement("small");
@@ -238,20 +217,57 @@ function renderDesktopMarket() {
             const buy = document.createElement("button");
             buy.type = "button";
             buy.className = "btn-secondary fishing-secondary-button";
-            buy.textContent = `Купити · ${numberFormat.format(item.price)}`;
+            buy.textContent = `Купити · ${numberFormat.format(item.price)} монет`;
             buy.dataset.marketSlot = slot;
             buy.dataset.marketItemId = id;
             buy.disabled = busy || Boolean(player.activeAttempt);
+            let quantityInput = null;
+            let quantityOutput = null;
+            card.append(name, detail);
+            if (slot === "bait") {
+                const quantityControl = document.createElement("div");
+                quantityControl.className = "market-quantity-control";
+                const quantityHeading = document.createElement("div");
+                quantityHeading.className = "market-quantity-heading";
+                const quantityLabel = document.createElement("label");
+                quantityInput = document.createElement("input");
+                quantityInput.type = "range";
+                quantityInput.min = "1";
+                quantityInput.max = "50";
+                quantityInput.step = "1";
+                quantityInput.value = "1";
+                quantityInput.id = `market-bait-quantity-${id}`;
+                quantityInput.dataset.marketQuantity = "";
+                quantityInput.setAttribute("aria-label", `Кількість: ${item.name}`);
+                quantityLabel.htmlFor = quantityInput.id;
+                quantityLabel.textContent = "Кількість";
+                quantityOutput = document.createElement("output");
+                quantityOutput.htmlFor = quantityInput.id;
+                quantityOutput.textContent = "1";
+                quantityHeading.append(quantityLabel, quantityOutput);
+                quantityInput.disabled = busy || Boolean(player.activeAttempt);
+                quantityControl.append(quantityHeading, quantityInput);
+                quantityInput.addEventListener("input", () => {
+                    const quantity = Number(quantityInput.value);
+                    quantityOutput.textContent = String(quantity);
+                    buy.textContent = `Купити · ${numberFormat.format(item.price * quantity)} монет`;
+                });
+                card.append(quantityControl);
+            }
             buy.addEventListener("click", () => {
-                performAction("buyEquipment", { slot, itemId: id, quantity: 1 });
+                performAction("buyEquipment", {
+                    slot,
+                    itemId: id,
+                    quantity: quantityInput ? Number(quantityInput.value) : 1
+                });
             });
-            card.append(name, detail, buy);
+            card.append(buy);
             items.append(card);
         }
         column.append(heading, items);
-        elements.desktopMarketColumns.append(column);
+        elements.marketColumns.append(column);
     }
-    desktopMarketRendered = true;
+    marketRendered = true;
 }
 
 function renderSpecimen(specimen, collection = false) {
@@ -433,13 +449,11 @@ function renderGameStage() {
     elements.hookBtn.dataset.ready = String(attempt?.stage === "hook");
     elements.hookBtn.textContent = attempt?.stage === "hook" ? "ПІДСІКАТИ ЗАРАЗ!" : "Підсікти";
     elements.venueSelect.disabled = busy || Boolean(attempt);
-    elements.equipmentShop.hidden = Boolean(attempt);
-    elements.baitSelect.disabled = busy || Boolean(attempt);
-    elements.baitQuantity.disabled = busy || Boolean(attempt);
-    elements.buyBaitBtn.disabled = busy || Boolean(attempt);
-    elements.buyEquipmentBtn.disabled = busy || Boolean(attempt);
-    elements.desktopMarketColumns.querySelectorAll("button[data-market-slot]").forEach(button => {
+    elements.marketColumns.querySelectorAll("button[data-market-slot]").forEach(button => {
         button.disabled = busy || Boolean(attempt);
+    });
+    elements.marketColumns.querySelectorAll("input[data-market-quantity]").forEach(input => {
+        input.disabled = busy || Boolean(attempt);
     });
     elements.reelBtn.disabled = busy || attempt?.stage !== "fight";
     elements.stopFightBtn.disabled = busy || attempt?.stage !== "fight";
@@ -587,7 +601,7 @@ function updatePage() {
     renderWorld();
     renderVenueSelect();
     renderEquipment();
-    renderDesktopMarket();
+    renderMarket();
     renderInventory();
     renderGameStage();
     renderResult();
@@ -602,7 +616,6 @@ async function loadState() {
     try {
         const result = await apiCall("/api/fishing/state");
         ({ player, world, catalog } = result);
-        populateShop();
         updatePage();
         elements.fishingLoading.hidden = true;
         elements.fishingLayout.hidden = false;
@@ -715,17 +728,6 @@ elements.reelBtn.addEventListener("blur", () => {
         pullDirection = null;
         updateJoystick();
     }
-});
-elements.buyEquipmentBtn.addEventListener("click", () => {
-    const [slot, itemId] = elements.equipmentSelect.value.split(":");
-    performAction("buyEquipment", { slot, itemId, quantity: 1 });
-});
-elements.buyBaitBtn.addEventListener("click", () => {
-    performAction("buyEquipment", {
-        slot: "bait",
-        itemId: elements.baitSelect.value,
-        quantity: Number(elements.baitQuantity.value)
-    });
 });
 elements.sellAllBtn.addEventListener("click", () => {
     if (window.confirm("Продати весь улов з інвентаря?")) performAction("sellAllFish");

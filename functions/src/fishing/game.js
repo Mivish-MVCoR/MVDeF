@@ -355,8 +355,8 @@ export function buyEquipment(player, slot, itemId, quantity = 1, now = Date.now(
     if (!item || !["rod", "line", "reel", "hook", "bait"].includes(slot)) {
         fail("invalid-argument", "Предмет у крамниці не знайдено.");
     }
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100) {
-        fail("invalid-argument", "Кількість має бути від 1 до 100.");
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 50) {
+        fail("invalid-argument", "Кількість має бути від 1 до 50.");
     }
     if (player.activeAttempt) fail("failed-precondition", "Не можна купувати спорядження під час риболовлі.");
     const totalPrice = item.price * quantity;

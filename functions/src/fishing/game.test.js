@@ -95,6 +95,14 @@ test("starter purchases, venue gates, bait and inventory capacity are enforced s
     assert.equal(player.equipment.rod.id, "expert");
     assert.equal(player.wallet, 9000 - EQUIPMENT.rod.expert.price);
 
+    assert.throws(
+        () => buyEquipment(player, "bait", "standard", 51, 202),
+        error => error instanceof FishingError && error.code === "invalid-argument"
+    );
+
+    buyEquipment(player, "bait", "standard", 50, 203);
+    assert.equal(player.bait.standard, 100);
+
     player.bait.standard = 0;
     player.inventory = Array.from({ length: 50 }, (_, index) => ({ id: String(index) }));
     assert.throws(
