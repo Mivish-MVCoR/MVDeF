@@ -1212,7 +1212,6 @@ html[data-theme="light"] .fishing-item-button {
     .fishing-page {
         width: min(calc(100% - 32px), 1440px);
     }
-
 }
 
 @media (max-width: 520px) {
@@ -1227,27 +1226,73 @@ html[data-theme="light"] .fishing-item-button {
     }
 
     .fishing-page-heading {
-        align-items: flex-start;
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px;
     }
 
     .fishing-profile-chip {
-        min-width: 116px;
+        min-width: 0;
+        grid-template-columns: 1fr auto;
+        align-items: center;
         padding: 8px;
         font-size: 0.65rem;
+        text-align: left;
     }
 
     .fishing-profile-chip strong { font-size: 0.75rem; }
 
+    .fishing-scene-card > .fishing-card-heading {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .fishing-scene-card > .fishing-card-heading > div:first-child {
+        flex: 1 1 100%;
+    }
+
+    .fishing-venue-select {
+        width: 100%;
+        max-width: none;
+        font-size: 1rem;
+    }
+
+    .fishing-world-state {
+        width: 100%;
+        align-items: center;
+        justify-items: stretch;
+        grid-template-columns: 1fr auto;
+    }
+
+    .fishing-weather {
+        min-width: 0;
+        flex-wrap: wrap;
+        font-size: 0.72rem;
+    }
+
+    .fishing-time {
+        text-align: right;
+    }
+
     .fishing-scene {
-        min-height: 270px;
+        min-height: 250px;
     }
 
     .fishing-action-row {
         grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
     }
 
     .fishing-action-buttons {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .fishing-action-buttons button {
+        min-width: 0;
+        min-height: 44px;
+        padding-inline: 8px;
+        white-space: normal;
     }
 
     .fishing-cast-button {
@@ -1256,6 +1301,12 @@ html[data-theme="light"] .fishing-item-button {
 
     .fish-direction-cue {
         grid-template-columns: 34px minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    .fish-direction-cue .counter-pull-text {
+        grid-column: 2;
+        text-align: left;
     }
 
     .fishing-control-row {
@@ -1271,6 +1322,53 @@ html[data-theme="light"] .fishing-item-button {
     .counter-pull-text {
         grid-column: 2;
         text-align: left;
+    }
+
+    .fishing-game-panel {
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .fishing-fight-actions button,
+    .inventory-actions button {
+        width: 100%;
+        min-height: 42px;
+    }
+
+    .fish-specimen {
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .fish-specimen-info strong {
+        font-size: 0.8rem;
+        overflow-wrap: anywhere;
+    }
+
+    .fish-specimen-info small {
+        line-height: 1.4;
+    }
+
+    .fish-specimen-actions {
+        gap: 8px;
+    }
+
+    .fish-specimen-actions button {
+        min-height: 40px;
+        white-space: normal;
+    }
+
+    .fishing-market-columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fishing-market-item button {
+        min-height: 42px;
+        font-size: 0.74rem;
+    }
+
+    .market-quantity-control input[type="range"] {
+        min-height: 36px;
     }
 
     @media (prefers-reduced-motion: reduce) {
