@@ -1,4 +1,4 @@
-import { xpToNextLevel } from "../functions/src/fishing/catalog.js";
+import { TIME_PERIODS, xpToNextLevel } from "../functions/src/fishing/catalog.js";
 import { CLOUDFLARE_API_URL, SITE_SESSION_KEY } from "./cloudflare-config.js";
 
 const elements = Object.fromEntries([
@@ -389,14 +389,22 @@ function renderStats() {
 
 function renderWorld() {
     elements.fishingWeather.textContent = `${world.weatherLabel} · оновлення за ${formatCountdown(world.weatherCycleEndsAt - Date.now())}`;
-    const hour = world.gameTime.hour;
-    const hourPosition = hour / 24 * 100;
-    const labelPosition = Math.max(6, Math.min(94, hourPosition));
-    const timeLabel = `${world.timeLabel} · ${String(hour).padStart(2, "0")}:00`;
+    const now = new Date();
+    const hour = now.getUTCHours();
+    const minute = now.getUTCMinutes();
+    const minutesSinceMidnight = hour * 60 + minute;
+    const period = Object.values(TIME_PERIODS).find(({ startHour, endHour }) =>
+        startHour < endHour
+            ? hour >= startHour && hour < endHour
+            : hour >= startHour || hour < endHour
+    );
+    const timeLabel = `${period.label} · ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    const timePosition = minutesSinceMidnight / (24 * 60) * 100;
+    const labelPosition = Math.max(6, Math.min(94, timePosition));
     elements.fishingTime.textContent = timeLabel;
-    elements.fishingTimeTrack.style.setProperty("--time-progress", `${hourPosition}%`);
+    elements.fishingTimeTrack.style.setProperty("--time-progress", `${timePosition}%`);
     elements.fishingTimeTrack.style.setProperty("--time-label-position", `${labelPosition}%`);
-    elements.fishingTimeTrack.setAttribute("aria-valuenow", String(hour));
+    elements.fishingTimeTrack.setAttribute("aria-valuenow", String(minutesSinceMidnight));
     elements.fishingTimeTrack.setAttribute("aria-valuetext", timeLabel);
     elements.fishingScene.dataset.weather = world.weather;
 }

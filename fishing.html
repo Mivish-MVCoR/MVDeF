@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#101713">
     <title>MVDeF — Риболовля</title>
     <link rel="stylesheet" href="css/portal.css">
-    <link rel="stylesheet" href="css/fishing.css?v=fishing-time-line-v0-1-1">
+    <link rel="stylesheet" href="css/fishing.css?v=fishing-time-line-v0-1-2">
     <script src="js/theme.js" defer></script>
 </head>
 <body>
@@ -71,17 +71,25 @@
         <div id="fishingLayout" class="fishing-layout" hidden>
             <section class="card fishing-scene-card" aria-labelledby="fishingSpotTitle">
                 <div class="fishing-time-line">
-                    <div id="fishingTimeTrack" class="fishing-time-track" role="progressbar" aria-label="Час доби" aria-valuemin="0" aria-valuemax="23" aria-valuenow="0">
+                    <div id="fishingTimeTrack" class="fishing-time-track" role="progressbar" aria-label="Час доби" aria-valuemin="0" aria-valuemax="1439" aria-valuenow="0">
                         <span id="fishingTime" class="fishing-time-label"></span>
                         <span class="fishing-time-progress" aria-hidden="true"></span>
                         <span class="fishing-time-marker" aria-hidden="true"></span>
                     </div>
                     <div class="fishing-time-ticks" aria-hidden="true">
-                        <span>00:00</span>
-                        <span>06:00</span>
-                        <span>12:00</span>
-                        <span>18:00</span>
-                        <span>24:00</span>
+                        <span>00</span>
+                        <span>02</span>
+                        <span>04</span>
+                        <span>06</span>
+                        <span>08</span>
+                        <span>10</span>
+                        <span>12</span>
+                        <span>14</span>
+                        <span>16</span>
+                        <span>18</span>
+                        <span>20</span>
+                        <span>22</span>
+                        <span>24</span>
                     </div>
                 </div>
                 <div class="fishing-card-heading">
@@ -257,7 +265,7 @@
 
     </main>
 
-    <script type="module" src="js/fishing.js?v=fishing-time-line-v0-1-1"></script>
+    <script type="module" src="js/fishing.js?v=fishing-time-line-v0-1-2"></script>
     <script type="module" src="js/logout.js"></script>
 </body>
 </html>
