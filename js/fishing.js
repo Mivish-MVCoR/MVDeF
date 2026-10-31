@@ -1,11 +1,17 @@
-import { TIME_PERIODS, xpToNextLevel } from "../functions/src/fishing/catalog.js";
+import {
+    GAME_DAY_MS,
+    GAME_TIME_EPOCH,
+    GAME_TIME_RATE,
+    TIME_PERIODS,
+    xpToNextLevel
+} from "../functions/src/fishing/catalog.js";
 import { CLOUDFLARE_API_URL, SITE_SESSION_KEY } from "./cloudflare-config.js";
 
 const elements = Object.fromEntries([
     "fishingAuthRequired", "fishingAuthMessage", "fishingLoading", "fishingLoadError",
     "fishingLoadErrorText", "retryFishingBtn", "fishingLayout", "fishingNotice",
     "fishingError", "fishingProfileChip", "fishingLevel", "fishingWallet", "venueSelect",
-    "fishingWeather", "fishingTime", "fishingTimeTrack", "fishingScene", "fishingSceneCaption", "fishingTacklePath",
+    "fishingWeather", "fishingTime", "fishingTimeTrack", "fishingWeatherBands", "fishingScene", "fishingSceneCaption", "fishingTacklePath",
     "fishDirectionCue", "fishDirectionText", "counterPullText", "fatigueHint", "fishingHint",
     "joystickKnob", "joystickHelp",
     "starterKitBtn", "castBtn", "fishingActionRow", "fishingWaitingPanel", "fishingStageTitle",
@@ -30,6 +36,20 @@ let busy = false;
 let marketRendered = false;
 
 const numberFormat = new Intl.NumberFormat("uk-UA");
+const weatherColors = {
+    clear: "rgba(248, 200, 74, 0.42)",
+    cloudy: "rgba(165, 181, 190, 0.42)",
+    rain: "rgba(65, 151, 230, 0.48)",
+    fog: "rgba(211, 222, 226, 0.52)",
+    storm: "rgba(161, 105, 212, 0.5)"
+};
+const weatherLabels = {
+    clear: "Ясно",
+    cloudy: "Хмарно",
+    rain: "Дощ",
+    fog: "Туман",
+    storm: "Шторм"
+};
 const gameResultText = {
     "no-bite": ["Риба не клюнула", "Цього разу клювання не було. Перевір наживку й спробуй ще раз."],
     "missed-hook": ["Запізно!", "Ти не встиг підсікти рибу у відведений час."],
@@ -388,25 +408,42 @@ function renderStats() {
 }
 
 function renderWorld() {
-    elements.fishingWeather.textContent = `${world.weatherLabel} · оновлення за ${formatCountdown(world.weatherCycleEndsAt - Date.now())}`;
-    const now = new Date();
+    const now = new Date(GAME_TIME_EPOCH + (Date.now() - GAME_TIME_EPOCH) * GAME_TIME_RATE);
     const hour = now.getUTCHours();
     const minute = now.getUTCMinutes();
     const minutesSinceMidnight = hour * 60 + minute;
+    const preciseMinute = minutesSinceMidnight + now.getUTCSeconds() / 60 + now.getUTCMilliseconds() / 60_000;
+    const day = Math.floor((now.getTime() - GAME_TIME_EPOCH) / GAME_DAY_MS);
+    const schedule = day === world.gameTime.day + 1
+        ? world.nextWeatherSchedule
+        : world.weatherSchedule;
+    const activeWeather = schedule.find(({ startMinute, endMinute }) =>
+        preciseMinute >= startMinute && preciseMinute < endMinute
+    ) || schedule[0];
     const period = Object.values(TIME_PERIODS).find(({ startHour, endHour }) =>
         startHour < endHour
             ? hour >= startHour && hour < endHour
             : hour >= startHour || hour < endHour
     );
     const timeLabel = `${period.label} · ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-    const timePosition = minutesSinceMidnight / (24 * 60) * 100;
+    const weatherChangeIn = (activeWeather.endMinute - preciseMinute) * 60_000 / GAME_TIME_RATE;
+    elements.fishingWeather.textContent = `${weatherLabels[activeWeather.weather]} · оновлення за ${formatCountdown(weatherChangeIn)}`;
+    const timePosition = preciseMinute / (24 * 60) * 100;
     const labelPosition = Math.max(6, Math.min(94, timePosition));
     elements.fishingTime.textContent = timeLabel;
     elements.fishingTimeTrack.style.setProperty("--time-progress", `${timePosition}%`);
     elements.fishingTimeTrack.style.setProperty("--time-label-position", `${labelPosition}%`);
-    elements.fishingTimeTrack.setAttribute("aria-valuenow", String(minutesSinceMidnight));
+    elements.fishingTimeTrack.setAttribute("aria-valuenow", String(preciseMinute));
     elements.fishingTimeTrack.setAttribute("aria-valuetext", timeLabel);
-    elements.fishingScene.dataset.weather = world.weather;
+    elements.fishingWeatherBands.style.backgroundImage = `linear-gradient(to right, ${schedule
+        .map(({ weather, startMinute, endMinute }) => {
+            const start = startMinute / 1440 * 100;
+            const end = endMinute / 1440 * 100;
+            const color = weatherColors[weather];
+            return `${color} ${start}%, ${color} ${end}%`;
+        })
+        .join(", ")})`;
+    elements.fishingScene.dataset.weather = activeWeather.weather;
 }
 
 function formatCountdown(ms) {

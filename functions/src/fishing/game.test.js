@@ -8,10 +8,12 @@ import {
     buyEquipment,
     buyStarterKit,
     createPlayer,
-    ensureCurrentWeather,
+    createWeatherSchedule,
+    currentGameTime,
     hookFish,
     moveFishToCollection,
     publicAttempt,
+    publicWorld,
     refreshAttempt,
     restoreFishFromCollection,
     runFishingAction,
@@ -454,14 +456,38 @@ test("sequential sale and collection actions update the latest fishing profile",
     assert.equal(restoreAction.player.collection.length, 0);
 });
 
-test("weather stays stable during a cycle and rolls over once when the next starts", () => {
-    const now = 1_800_000_000_000;
-    const first = ensureCurrentWeather(null, now, deterministicRandom(0.99));
-    const stable = ensureCurrentWeather(first, now + 1000, deterministicRandom(0));
-    assert.equal(stable.weather, first.weather);
-    const nextCycle = ensureCurrentWeather(first, first.cycleStartedAt + 900_000, deterministicRandom(0.99));
-    assert.notEqual(nextCycle.cycle, first.cycle);
-    assert.equal(nextCycle.weather, "storm");
+test("the accelerated game clock advances one in-game minute every 30 real seconds", () => {
+    const now = Date.UTC(2026, 9, 31, 12, 0);
+    const start = currentGameTime(now);
+    const afterThirtySeconds = currentGameTime(now + 30_000);
+    assert.equal(afterThirtySeconds.minuteOfDay, start.minuteOfDay + 1);
+    assert.equal(afterThirtySeconds.day, start.day);
+});
+
+test("weather forecast stays stable within a day and changes between consecutive days", () => {
+    const first = createWeatherSchedule(100);
+    const sameDay = createWeatherSchedule(100);
+    assert.deepEqual(sameDay, first);
+    assert.equal(first[0].startMinute, 0);
+    assert.equal(first.at(-1).endMinute, 1440);
+    for (let index = 1; index < first.length; index++) {
+        assert.equal(first[index - 1].endMinute, first[index].startMinute);
+    }
+    for (let day = 1; day < 100; day++) {
+        assert.notDeepEqual(createWeatherSchedule(day), createWeatherSchedule(day - 1));
+    }
+});
+
+test("the public world weather matches the active forecast segment and expires at its boundary", () => {
+    const now = Date.UTC(2026, 9, 31, 12, 0);
+    const world = publicWorld(now);
+    const activeSegment = world.weatherSchedule.find(({ startMinute, endMinute }) =>
+        world.gameTime.minuteOfDay >= startMinute && world.gameTime.minuteOfDay < endMinute
+    );
+    assert.equal(world.weather, activeSegment.weather);
+    assert.ok(world.weatherCycleEndsAt > now);
+    assert.equal(world.nextWeatherSchedule[0].startMinute, 0);
+    assert.equal(world.nextWeatherSchedule.at(-1).endMinute, 1440);
 });
 
 test("fishing actions do not accept client-selected attempt and specimen identifiers", () => {

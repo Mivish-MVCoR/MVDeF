@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#101713">
     <title>MVDeF — Риболовля</title>
     <link rel="stylesheet" href="css/portal.css">
-    <link rel="stylesheet" href="css/fishing.css?v=fishing-time-line-v0-1-2">
+    <link rel="stylesheet" href="css/fishing.css?v=fishing-world-weather-v0-2-0">
     <script src="js/theme.js" defer></script>
 </head>
 <body>
@@ -71,12 +71,14 @@
         <div id="fishingLayout" class="fishing-layout" hidden>
             <section class="card fishing-scene-card" aria-labelledby="fishingSpotTitle">
                 <div class="fishing-time-line">
-                    <div id="fishingTimeTrack" class="fishing-time-track" role="progressbar" aria-label="Час доби" aria-valuemin="0" aria-valuemax="1439" aria-valuenow="0">
+                    <div id="fishingTimeTrack" class="fishing-time-track" role="progressbar" aria-label="Час доби" aria-valuemin="0" aria-valuemax="1440" aria-valuenow="0">
+                        <span id="fishingWeatherBands" class="fishing-weather-bands" aria-hidden="true"></span>
+                        <span class="fishing-time-grid" aria-hidden="true"></span>
                         <span id="fishingTime" class="fishing-time-label"></span>
                         <span class="fishing-time-progress" aria-hidden="true"></span>
                         <span class="fishing-time-marker" aria-hidden="true"></span>
                     </div>
-                    <div class="fishing-time-ticks" aria-hidden="true">
+                    <div class="fishing-time-ticks fishing-time-ticks-desktop" aria-hidden="true">
                         <span>00</span>
                         <span>02</span>
                         <span>04</span>
@@ -90,6 +92,24 @@
                         <span>20</span>
                         <span>22</span>
                         <span>24</span>
+                    </div>
+                    <div class="fishing-time-ticks fishing-time-ticks-mobile" aria-hidden="true">
+                        <span>0</span>
+                        <span>3</span>
+                        <span>6</span>
+                        <span>9</span>
+                        <span>12</span>
+                        <span>15</span>
+                        <span>18</span>
+                        <span>21</span>
+                        <span>0</span>
+                    </div>
+                    <div class="fishing-weather-legend" aria-label="Позначення погоди">
+                        <span><i class="weather-swatch weather-clear"></i>Ясно</span>
+                        <span><i class="weather-swatch weather-cloudy"></i>Хмарно</span>
+                        <span><i class="weather-swatch weather-rain"></i>Дощ</span>
+                        <span><i class="weather-swatch weather-fog"></i>Туман</span>
+                        <span><i class="weather-swatch weather-storm"></i>Шторм</span>
                     </div>
                 </div>
                 <div class="fishing-card-heading">
@@ -265,7 +285,7 @@
 
     </main>
 
-    <script type="module" src="js/fishing.js?v=fishing-time-line-v0-1-2"></script>
+    <script type="module" src="js/fishing.js?v=fishing-world-weather-v0-2-0"></script>
     <script type="module" src="js/logout.js"></script>
 </body>
 </html>

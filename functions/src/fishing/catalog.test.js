@@ -7,7 +7,6 @@ import {
     TIME_PERIODS,
     VENUES,
     WEATHER_CHANCES,
-    WEATHER_CYCLE_MS,
     getAvailableFishWeights,
     selectFish,
     validateFishingCatalog,
@@ -89,7 +88,6 @@ test("a deterministic 200,000-catch sample preserves the 90/7/3 rarity distribut
 test("published weather and rarity probabilities sum to 100 percent", () => {
     assert.equal(Object.values(WEATHER_CHANCES).reduce((sum, chance) => sum + chance, 0), 1);
     assert.equal(Object.values(FISH_CATEGORIES).reduce((sum, category) => sum + category.chance, 0), 1);
-    assert.equal(WEATHER_CYCLE_MS, 900_000);
 });
 
 test("venue level gates and shared in-game time periods match the specification", () => {

@@ -7,10 +7,9 @@ import { consumeLoginToken, isValidLoginToken, LoginTokenError } from "./auth/lo
 import {
     EQUIPMENT,
     FishingError,
-    WEATHER_LABELS,
     buyStarterKit,
+    createWorldWeather,
     createPlayer,
-    ensureCurrentWeather,
     publicPlayer,
     publicWorld,
     refreshAttempt,
@@ -70,19 +69,6 @@ function convertFishingError(error) {
     return new HttpsError("internal", "Не вдалося виконати дію риболовлі. Спробуй ще раз.");
 }
 
-async function getCurrentWeather(now) {
-    const weatherRef = getDatabase().ref("mvdef/fishingWorld/weather");
-    const random = randomFloat();
-    const result = await weatherRef.transaction(current =>
-        ensureCurrentWeather(current, now, () => random),
-    undefined, false);
-    const weather = result.snapshot.val();
-    if (!weather || !WEATHER_LABELS[weather.weather]) {
-        throw new HttpsError("internal", "Не вдалося отримати спільний стан погоди.");
-    }
-    return weather;
-}
-
 async function readOrCreatePlayer(uid, now) {
     const playerRef = getDatabase().ref(`mvdef/fishingPlayers/${uid}`);
     const refreshRandom = randomFloat();
@@ -124,13 +110,10 @@ export const getFishingState = onCall(
         const uid = requirePlayerUid(request);
         const now = Date.now();
         try {
-            const [weather, player] = await Promise.all([
-                getCurrentWeather(now),
-                readOrCreatePlayer(uid, now)
-            ]);
+            const player = await readOrCreatePlayer(uid, now);
             return {
                 player: publicPlayer(player),
-                world: publicWorld(weather, now),
+                world: publicWorld(now),
                 catalog: publicCatalog()
             };
         } catch (error) {
@@ -155,7 +138,7 @@ export const fishingAction = onCall(
         const specimenId = randomUUID();
 
         try {
-            const weather = await getCurrentWeather(now);
+            const weather = createWorldWeather(now);
             let actionResult;
             let actionError;
             const result = await playerRef.transaction(current => {
@@ -169,7 +152,7 @@ export const fishingAction = onCall(
                         id,
                         specimenId,
                         weather: weather.weather,
-                        time: publicWorld(weather, now).gameTime.period,
+                        time: publicWorld(now).gameTime.period,
                         random
                     });
                     actionResult = outcome.result;
@@ -185,7 +168,7 @@ export const fishingAction = onCall(
             return {
                 player: publicPlayer(result.snapshot.val()),
                 result: actionResult,
-                world: publicWorld(weather, now)
+                world: publicWorld(now)
             };
         } catch (error) {
             if (error instanceof HttpsError) throw error;

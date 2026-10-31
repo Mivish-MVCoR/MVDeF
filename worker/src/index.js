@@ -1,10 +1,8 @@
-import { createPlayer, EQUIPMENT, publicPlayer, publicWorld, refreshAttempt, rollWeather, runFishingAction, WEATHER_LABELS } from "../../functions/src/fishing/game.js";
+import { createPlayer, createWorldWeather, EQUIPMENT, publicPlayer, publicWorld, refreshAttempt, runFishingAction } from "../../functions/src/fishing/game.js";
 import { FISH, FISH_CATEGORIES, FISHING_RULES, VENUES } from "../../functions/src/fishing/catalog.js";
 
 const LOGIN_TOKEN_PATTERN = /^[A-Za-z0-9]{32}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const WEATHER_CYCLE_MS = 15 * 60 * 1000;
-const WEATHER_CYCLE_EPOCH = Date.UTC(2026, 0, 1);
 const FISHING_TABLE = "fishing_players";
 const encoder = new TextEncoder();
 const SESSION_ISSUER = "mvdef-cloudflare";
@@ -169,18 +167,8 @@ function randomFloat() {
     return bytes[0] / 0x1_0000_0000;
 }
 
-async function getWorld(db, now) {
-    const cycle = Math.floor((now - WEATHER_CYCLE_EPOCH) / WEATHER_CYCLE_MS);
-    const existing = await db.prepare("SELECT weather FROM fishing_weather WHERE cycle = ?").bind(cycle).first();
-    let weather = existing?.weather;
-    if (!weather) {
-        const proposed = rollWeather(randomFloat);
-        await db.prepare("INSERT OR IGNORE INTO fishing_weather (cycle, weather) VALUES (?, ?)").bind(cycle, proposed).run();
-        const stored = await db.prepare("SELECT weather FROM fishing_weather WHERE cycle = ?").bind(cycle).first();
-        weather = stored?.weather;
-    }
-    if (!weather || !WEATHER_LABELS[weather]) throw new Error("Could not read shared fishing weather.");
-    return { cycle, weather, cycleStartedAt: WEATHER_CYCLE_EPOCH + cycle * WEATHER_CYCLE_MS };
+function getWorld(now) {
+    return createWorldWeather(now);
 }
 
 async function readOrCreatePlayer(db, uid, now) {
@@ -218,7 +206,7 @@ async function commitAction(db, uid, action, payload, now, world) {
                 id: attemptId,
                 specimenId,
                 weather: world.weather,
-                time: publicWorld(world, now).gameTime.period,
+                time: publicWorld(now).gameTime.period,
                 random: stream.next
             });
         } catch (error) {
@@ -320,16 +308,16 @@ async function handleRequest(request, env) {
             }
             if (url.pathname === "/api/fishing/state" && request.method === "GET") {
                 const now = Date.now();
-                const world = await getWorld(env.DB, now);
+                const world = getWorld(now);
                 const player = await refreshPlayerState(env.DB, uid, now);
                 responseData = {
                     player: publicPlayer(player),
-                    world: publicWorld(world, now),
+                    world: publicWorld(now),
                     catalog: publicCatalog()
                 };
             } else if (url.pathname === "/api/fishing/action" && request.method === "POST") {
                 const now = Date.now();
-                const world = await getWorld(env.DB, now);
+                const world = getWorld(now);
                 const body = await request.json();
                 const result = await commitAction(env.DB, uid, body?.action, body?.payload || {}, now, world);
                 const row = await env.DB.prepare(`SELECT player_json FROM ${FISHING_TABLE} WHERE uid = ?`).bind(uid).first();
@@ -337,7 +325,7 @@ async function handleRequest(request, env) {
                 responseData = {
                     player: publicPlayer(JSON.parse(row.player_json)),
                     result: result.result,
-                    world: publicWorld(world, now)
+                    world: publicWorld(now)
                 };
             } else if (url.pathname === "/api/fishing/reset" && request.method === "POST") {
                 await env.DB.prepare(`DELETE FROM ${FISHING_TABLE} WHERE uid = ?`).bind(uid).run();

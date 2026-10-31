@@ -204,7 +204,9 @@ export const WEATHER_LABELS = Object.freeze({
     storm: "Шторм"
 });
 
-export const WEATHER_CYCLE_MS = 15 * 60 * 1000;
+export const GAME_TIME_EPOCH = Date.UTC(2026, 0, 1);
+export const GAME_TIME_RATE = 2;
+export const GAME_DAY_MS = 24 * 60 * 60 * 1000;
 
 export const TIME_PERIODS = Object.freeze({
     morning: Object.freeze({ label: "Ранок", startHour: 5, endHour: 8 }),

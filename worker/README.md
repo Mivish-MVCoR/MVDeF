@@ -7,8 +7,11 @@ where it is consumed exactly once from D1. No Google service-account key is
 needed, and the existing Firebase database token path is no longer used for
 new login links.
 
-The Worker stores profiles, shared weather, and one-time login tokens in D1.
-It signs short-lived site sessions with a Cloudflare Worker secret. The
+The Worker stores profiles and one-time login tokens in D1. The fishing clock
+advances at two in-game minutes per real minute, and each in-game day receives
+a stable, randomized weather forecast shared by the Worker and website. Weather
+forecasts are calculated from the game day and are not stored in D1. The Worker
+signs short-lived site sessions with a Cloudflare Worker secret. The
 plugin-to-Worker credential is a separate secret that must be kept only in the
 Minecraft server's environment/configuration and the Worker's secret store.
 The cabinet can delete only the current session's fishing profile. Demo
@@ -20,8 +23,8 @@ set it to `"false"` and redeploy to disable it. Demo sessions share the
 
 - D1 `mvdef-fishing` has been created in the Cloudflare account's Eastern
   Europe region.
-- Migration `0001_fishing.sql` (player profiles and shared weather) has been
-  applied remotely.
+- Migration `0001_fishing.sql` (player profiles and the legacy weather table)
+  has been applied remotely.
 - Migration `0002_login_tokens.sql` (one-time Minecraft login tokens) has been
   applied remotely.
 - Account subdomain `mvdef-mc.workers.dev` is registered.

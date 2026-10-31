@@ -2,10 +2,12 @@ import {
     FISH,
     FISH_CATEGORIES,
     FISHING_RULES,
+    GAME_DAY_MS,
+    GAME_TIME_EPOCH,
+    GAME_TIME_RATE,
     TIME_PERIODS,
     VENUES,
     WEATHER_CHANCES,
-    WEATHER_CYCLE_MS,
     WEATHER_FISH_MULTIPLIERS,
     TIME_FISH_MULTIPLIERS,
     pickWeighted,
@@ -17,7 +19,6 @@ const INITIAL_DURABILITY = FISHING_RULES.wear.durability;
 const MAX_FIGHT_STEP_MS = 2000;
 const IDEAL_TENSION_MIN = 30;
 const IDEAL_TENSION_MAX = 60;
-const WEATHER_CYCLE_EPOCH = Date.UTC(2026, 0, 1);
 
 export const EQUIPMENT = Object.freeze({
     rod: Object.freeze({
@@ -162,32 +163,106 @@ export function createPlayer(now = Date.now()) {
     };
 }
 
-export function createWorldWeather(now = Date.now(), random = Math.random) {
-    const cycle = Math.floor((now - WEATHER_CYCLE_EPOCH) / WEATHER_CYCLE_MS);
-    const weather = pickWeighted(Object.entries(WEATHER_CHANCES), random);
+export function createWorldWeather(now = Date.now()) {
+    const gameTime = currentGameTime(now);
+    const schedule = createWeatherSchedule(gameTime.day);
+    const segment = schedule.find(({ startMinute, endMinute }) =>
+        gameTime.minuteOfDay >= startMinute && gameTime.minuteOfDay < endMinute
+    );
+    const dayStart = GAME_TIME_EPOCH + gameTime.day * GAME_DAY_MS;
     return {
-        cycle,
-        weather,
-        cycleStartedAt: WEATHER_CYCLE_EPOCH + cycle * WEATHER_CYCLE_MS,
-        updatedAt: now
+        cycle: gameTime.day,
+        weather: segment.weather,
+        cycleStartedAt: realTimestampForGameMinute(dayStart, segment.startMinute),
+        weatherCycleEndsAt: realTimestampForGameMinute(dayStart, segment.endMinute),
+        schedule
     };
 }
 
 export function currentGameTime(now = Date.now()) {
-    const date = new Date(now);
+    const gameTimestamp = GAME_TIME_EPOCH + (now - GAME_TIME_EPOCH) * GAME_TIME_RATE;
+    const date = new Date(gameTimestamp);
     const hour = date.getUTCHours();
+    const minute = date.getUTCMinutes();
+    const minuteOfDay = hour * 60 + minute;
     const period = Object.entries(TIME_PERIODS).find(([, value]) =>
         value.startHour < value.endHour
             ? hour >= value.startHour && hour < value.endHour
             : hour >= value.startHour || hour < value.endHour
     )?.[0];
-    return { hour, period: period || "night" };
+    return {
+        day: Math.floor((gameTimestamp - GAME_TIME_EPOCH) / GAME_DAY_MS),
+        hour,
+        minute,
+        minuteOfDay,
+        period: period || "night"
+    };
 }
 
-export function ensureCurrentWeather(current, now = Date.now(), random = Math.random) {
-    const currentCycle = Math.floor((now - WEATHER_CYCLE_EPOCH) / WEATHER_CYCLE_MS);
-    if (current && current.cycle === currentCycle && current.weather in WEATHER_CHANCES) return current;
-    return createWorldWeather(now, random);
+export function createWeatherSchedule(day) {
+    if (day < 0) return generateWeatherSchedule(day);
+    let previousSchedule = null;
+    for (let currentDay = 0; currentDay <= day; currentDay++) {
+        let schedule = generateWeatherSchedule(currentDay);
+        if (previousSchedule && weatherScheduleKey(schedule) === weatherScheduleKey(previousSchedule)) {
+            schedule = varyFirstWeather(schedule);
+        }
+        previousSchedule = schedule;
+    }
+    return previousSchedule;
+}
+
+function generateWeatherSchedule(day) {
+    let state = Math.imul((day + 1) | 0, 0x6d2b79f5) >>> 0;
+    const random = () => {
+        state = (state + 0x6d2b79f5) | 0;
+        let value = state;
+        value = Math.imul(value ^ value >>> 15, value | 1);
+        value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+        return ((value ^ value >>> 14) >>> 0) / 0x1_0000_0000;
+    };
+    const chooseWeather = () => pickWeighted(Object.entries(WEATHER_CHANCES), random);
+
+    if (random() < 0.3) {
+        return [{ weather: chooseWeather(), startMinute: 0, endMinute: 1440 }];
+    }
+
+    const segmentCount = 2 + Math.floor(random() * 4);
+    const boundaries = new Set();
+    while (boundaries.size < segmentCount - 1) {
+        boundaries.add(1 + Math.floor(random() * 23));
+    }
+    const hours = [0, ...[...boundaries].sort((a, b) => a - b), 24];
+    return mergeWeatherSegments(hours.slice(0, -1).map((startHour, index) => ({
+        weather: chooseWeather(),
+        startMinute: startHour * 60,
+        endMinute: hours[index + 1] * 60
+    })));
+}
+
+function mergeWeatherSegments(segments) {
+    return segments.reduce((merged, segment) => {
+        const previous = merged.at(-1);
+        if (previous?.weather === segment.weather) previous.endMinute = segment.endMinute;
+        else merged.push({ ...segment });
+        return merged;
+    }, []);
+}
+
+function weatherScheduleKey(schedule) {
+    return schedule.map(({ weather, startMinute, endMinute }) =>
+        `${weather}:${startMinute}-${endMinute}`
+    ).join("|");
+}
+
+function varyFirstWeather(schedule) {
+    const firstWeatherIndex = Object.keys(WEATHER_CHANCES).indexOf(schedule[0].weather);
+    schedule[0].weather = Object.keys(WEATHER_CHANCES)[(firstWeatherIndex + 1) % Object.keys(WEATHER_CHANCES).length];
+    return mergeWeatherSegments(schedule);
+}
+
+function realTimestampForGameMinute(gameDayStart, minute) {
+    return GAME_TIME_EPOCH + (gameDayStart + minute * 60_000 - GAME_TIME_EPOCH) / GAME_TIME_RATE;
 }
 
 export function getLevelProgress(player) {
@@ -219,12 +294,15 @@ export function publicPlayer(player) {
     return safe;
 }
 
-export function publicWorld(weather, now = Date.now()) {
+export function publicWorld(now = Date.now()) {
     const gameTime = currentGameTime(now);
+    const weather = createWorldWeather(now);
     return {
         weather: weather.weather,
         weatherLabel: WEATHER_LABELS[weather.weather],
-        weatherCycleEndsAt: weather.cycleStartedAt + WEATHER_CYCLE_MS,
+        weatherCycleEndsAt: weather.weatherCycleEndsAt,
+        weatherSchedule: weather.schedule,
+        nextWeatherSchedule: createWeatherSchedule(gameTime.day + 1),
         gameTime,
         timeLabel: TIME_PERIODS[gameTime.period].label
     };
