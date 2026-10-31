@@ -5,7 +5,7 @@ const elements = Object.fromEntries([
     "fishingAuthRequired", "fishingAuthMessage", "fishingLoading", "fishingLoadError",
     "fishingLoadErrorText", "retryFishingBtn", "fishingLayout", "fishingNotice",
     "fishingError", "fishingProfileChip", "fishingLevel", "fishingWallet", "venueSelect",
-    "fishingWeather", "fishingTime", "fishingScene", "fishingSceneCaption", "fishingTacklePath",
+    "fishingWeather", "fishingTime", "fishingTimeTrack", "fishingScene", "fishingSceneCaption", "fishingTacklePath",
     "fishDirectionCue", "fishDirectionText", "counterPullText", "fatigueHint", "fishingHint",
     "joystickKnob", "joystickHelp",
     "starterKitBtn", "castBtn", "fishingActionRow", "fishingWaitingPanel", "fishingStageTitle",
@@ -389,7 +389,15 @@ function renderStats() {
 
 function renderWorld() {
     elements.fishingWeather.textContent = `${world.weatherLabel} · оновлення за ${formatCountdown(world.weatherCycleEndsAt - Date.now())}`;
-    elements.fishingTime.textContent = `${world.timeLabel}, ${String(world.gameTime.hour).padStart(2, "0")}:00`;
+    const hour = world.gameTime.hour;
+    const hourPosition = hour / 24 * 100;
+    const labelPosition = Math.max(6, Math.min(94, hourPosition));
+    const timeLabel = `${world.timeLabel} · ${String(hour).padStart(2, "0")}:00`;
+    elements.fishingTime.textContent = timeLabel;
+    elements.fishingTimeTrack.style.setProperty("--time-progress", `${hourPosition}%`);
+    elements.fishingTimeTrack.style.setProperty("--time-label-position", `${labelPosition}%`);
+    elements.fishingTimeTrack.setAttribute("aria-valuenow", String(hour));
+    elements.fishingTimeTrack.setAttribute("aria-valuetext", timeLabel);
     elements.fishingScene.dataset.weather = world.weather;
 }
 
