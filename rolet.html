@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="0; url=rulet/">
+    <title>MVDeF — Рулетка</title>
+</head>
+<body>
+    <p>Відкриваємо рулетку…</p>
+    <script>
+        window.location.replace(new URL(`rulet/${window.location.search}${window.location.hash}`, window.location.href));
+    </script>
+</body>
+</html>

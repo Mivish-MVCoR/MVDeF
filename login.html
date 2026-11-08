@@ -82,7 +82,23 @@
 
         const params = new URLSearchParams(window.location.search);
         const token = params.get('token');
+        const requestedNext = params.get('next');
         const status = document.getElementById('status');
+
+        function getSafeNextPath(value) {
+            if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+            try {
+                const basePath = new URL('.', window.location.href).pathname;
+                const destination = new URL(value.slice(1), `${window.location.origin}${basePath}`);
+                if (destination.origin !== window.location.origin ||
+                    !destination.pathname.startsWith(basePath) ||
+                    destination.pathname === `${basePath}login.html` ||
+                    destination.pathname === `${basePath}login`) return null;
+                return `${destination.pathname}${destination.search}${destination.hash}`;
+            } catch {
+                return null;
+            }
+        }
 
         if (!token) {
             status.textContent = 'Токен не знайдено. Введи //empire на сервері.';
@@ -116,7 +132,7 @@
                     sessionStorage.removeItem('isDemo');
                     sessionStorage.setItem('mvdefSessionExpiresAt', String(expiresAt));
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    window.location.href = 'cabinet.html';
+                    window.location.href = getSafeNextPath(requestedNext) || 'cabinet.html';
                 })
                 .catch(error => {
                     console.error('Помилка безпечного входу:', error);
