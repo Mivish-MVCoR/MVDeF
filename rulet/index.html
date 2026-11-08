@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0e17">
+    <title>MVDeF — Рулетка</title>
+    <link rel="stylesheet" href="rulet.css">
+    <script src="../js/theme.js" defer></script>
+    <script type="module" src="rulet.js"></script>
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="../cabinet.html"><span class="brand-mark">M</span> MVDeF</a>
+        <nav><a href="../cabinet.html">Кабінет</a></nav>
+    </header>
+
+    <main class="page">
+        <section class="heading">
+            <p class="eyebrow">МІНІГРА</p>
+            <h1>Рулетка</h1>
+            <p class="subtitle">Дуель на витримку. Один барабан, шість гнізд, один бойовий патрон.</p>
+        </section>
+
+        <section class="profile-bar" aria-label="Статистика гравця">
+            <div class="player-name" id="playerName">Завантаження профілю…</div>
+            <div class="stats">
+                <div><span>Ігор</span><strong id="gamesCount">—</strong></div>
+                <div><span>Смертей</span><strong id="deathsCount">—</strong></div>
+                <div><span>Монет</span><strong id="coinsCount">—</strong></div>
+            </div>
+            <button class="button button-secondary" id="openShop" type="button">Магазин</button>
+        </section>
+
+        <section class="game-card" aria-live="polite">
+            <div id="notice" class="notice">Перевіряємо сеанс…</div>
+            <div id="invitePanel" class="invite-panel" hidden>
+                <p class="eyebrow">ЗАПРОШЕННЯ НА ДУЕЛЬ</p>
+                <h2 id="duelTitle">Дуель</h2>
+                <p id="stakeText" class="muted"></p>
+                <p id="inviteStatus" class="muted"></p>
+                <div class="actions" id="inviteActions" hidden>
+                    <button class="button button-primary" id="acceptInvite" type="button">Прийняти дуель</button>
+                    <button class="button button-secondary" id="declineInvite" type="button">Відхилити</button>
+                </div>
+            </div>
+
+            <div id="duelPanel" hidden>
+                <div class="duel-meta">
+                    <div><span>Суперник</span><strong id="opponentName">—</strong></div>
+                    <div><span>Постріли</span><strong id="shotCount">0 / 6</strong></div>
+                    <div><span>Ставка Minecraft</span><strong id="duelStake">—</strong></div>
+                </div>
+
+                <div class="revolver-stage" id="revolverStage" data-skin="classic">
+                    <div class="cylinder" id="cylinder" aria-label="Барабан револьвера з шістьма гніздами">
+                        <div class="chamber" data-chamber="1">1</div>
+                        <div class="chamber" data-chamber="2">2</div>
+                        <div class="chamber" data-chamber="3">3</div>
+                        <div class="chamber" data-chamber="4">4</div>
+                        <div class="chamber" data-chamber="5">5</div>
+                        <div class="chamber" data-chamber="6">6</div>
+                        <div class="cylinder-center"></div>
+                    </div>
+                    <div class="gun-grip" aria-hidden="true"></div>
+                </div>
+
+                <p id="turnStatus" class="turn-status"></p>
+                <p id="countdown" class="countdown"></p>
+                <p id="shotMessage" class="shot-message" role="status"></p>
+                <div class="actions">
+                    <button class="button button-danger" id="fireButton" type="button" disabled>Спуск</button>
+                    <button class="button button-secondary" id="rematchButton" type="button" hidden>Реванш</button>
+                </div>
+            </div>
+        </section>
+
+        <p class="fine-print">Ставки Minecraft перевіряє та проводить серверний плагін. Монети й скіни — окремо для сайту.</p>
+    </main>
+
+    <dialog class="shop-dialog" id="shopDialog">
+        <div class="shop-header">
+            <div><p class="eyebrow">КОЛЕКЦІЯ</p><h2>Магазин скінів</h2></div>
+            <button class="close-button" id="closeShop" type="button" aria-label="Закрити магазин">×</button>
+        </div>
+        <p class="muted">Баланс сайту: <strong id="shopCoins">0</strong> монет</p>
+        <div class="skin-list" id="skinList"></div>
+        <p class="shop-note">Монети нараховуються за перемогу в дуелі. Класичний скін безкоштовний.</p>
+    </dialog>
+
+    <script type="module">
+        import { SITE_SESSION_KEY } from '../js/cloudflare-config.js';
+        const duel = new URLSearchParams(location.search).get('duel');
+        if (!sessionStorage.getItem(SITE_SESSION_KEY)) {
+            document.getElementById('notice').textContent =
+                'Для гри відкрий персональне посилання на дуель із чату Minecraft.';
+        }
+        if (!duel) {
+            document.getElementById('notice').textContent =
+                'Щоб увійти в дуель, відкрий посилання-запрошення з чату Minecraft.';
+        }
+    </script>
+</body>
+</html>
