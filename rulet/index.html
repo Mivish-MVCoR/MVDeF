@@ -3,21 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0a0e17">
+    <meta name="theme-color" content="#0b100e">
     <title>MVDeF — Рулетка</title>
+    <link rel="stylesheet" href="../css/portal.css">
     <link rel="stylesheet" href="rulet.css">
     <script src="../js/theme.js" defer></script>
     <script type="module" src="rulet.js"></script>
+    <script type="module" src="../js/logout.js"></script>
 </head>
 <body>
-    <header class="topbar">
-        <a class="brand" href="../cabinet.html"><span class="brand-mark">M</span> MVDeF</a>
-        <nav><a href="../cabinet.html">Кабінет</a></nav>
+    <header class="navbar">
+        <div class="logo-area">
+            <a class="logo" href="../cabinet.html" aria-label="MVDeF — кабінет">
+                <img class="logo-mark" src="../assets/mvdef-mark.svg" alt="">
+                <span class="logo-word">MVDeF</span>
+            </a>
+        </div>
+        <nav aria-label="Головна навігація">
+            <a href="../cabinet.html">Кабінет</a>
+            <a href="../map.html">Карта</a>
+            <a href="../fishing.html">Риболовля</a>
+            <a href="./" aria-current="page">Рулетка</a>
+            <a href="#" id="logoutBtn">Вийти</a>
+        </nav>
     </header>
 
     <main class="page">
         <section class="heading">
-            <p class="eyebrow">МІНІГРА</p>
+            <p class="section-label eyebrow">МІНІГРА</p>
             <h1>Рулетка</h1>
             <p class="subtitle">Дуель на витримку. Один барабан, шість гнізд, один бойовий патрон.</p>
         </section>
