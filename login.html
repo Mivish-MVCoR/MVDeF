@@ -21,6 +21,37 @@
             </div>
             <p>Введи команду <code>//empire</code> на сервері щоб отримати посилання для входу</p>
             <div id="status" class="status"></div>
+
+            <div class="guest-auth-card">
+                <div class="auth-mode-toggle" role="tablist" aria-label="Вибір способу входу">
+                    <button class="auth-mode-button is-active" type="button" data-mode="login">Увійти</button>
+                    <button class="auth-mode-button" type="button" data-mode="register">Реєстрація</button>
+                </div>
+
+                <form id="guestAuthForm" class="auth-form" novalidate>
+                    <label class="auth-field">
+                        <span>Електронна пошта</span>
+                        <input id="guestEmail" type="email" autocomplete="email" required>
+                    </label>
+
+                    <label class="auth-field">
+                        <span>Пароль</span>
+                        <input id="guestPassword" type="password" minlength="6" autocomplete="current-password" required>
+                    </label>
+
+                    <label class="auth-remember" for="guestRemember">
+                        <input id="guestRemember" type="checkbox">
+                        <span>Запам'ятати мене</span>
+                    </label>
+
+                    <button class="auth-submit" type="submit">Увійти</button>
+                </form>
+
+                <p class="auth-switch">
+                    <span id="guestSwitchPrompt">Ще не маєш акаунта?</span>
+                    <button id="guestToggleLink" class="auth-link-button" type="button">Зареєструватися</button>
+                </p>
+            </div>
         </div>
     </div>
     <script type="module">
@@ -29,9 +60,25 @@
         import { CLOUDFLARE_API_URL, SITE_SESSION_KEY } from './js/cloudflare-config.js';
         import './js/moderator-shortcut.js';
 
+        const GUEST_USERS_KEY = 'mvdefGuestUsers';
+        const GUEST_SESSION_KEY = 'mvdefGuestSession';
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const requestedNext = params.get('next');
+        const status = document.getElementById('status');
+
         let demoLogoClicks = 0;
         const demoToast = document.getElementById('demoToast');
         const demoToastMessage = document.getElementById('demoToastMessage');
+        const guestAuthForm = document.getElementById('guestAuthForm');
+        const guestEmailInput = document.getElementById('guestEmail');
+        const guestPasswordInput = document.getElementById('guestPassword');
+        const guestRememberInput = document.getElementById('guestRemember');
+        const guestSubmitButton = guestAuthForm.querySelector('.auth-submit');
+        const guestToggleLink = document.getElementById('guestToggleLink');
+        const guestSwitchPrompt = document.getElementById('guestSwitchPrompt');
+        const guestModeButtons = Array.from(document.querySelectorAll('.auth-mode-button'));
+
         const demoMessages = {
             5: 'Ще 5 кліків до ДЕМО...',
             6: 'Ще 4 кліка до ДЕМО...',
@@ -39,6 +86,156 @@
             8: 'Ще 2 кліка до ДЕМО...',
             9: 'Ще 1 клік до ДЕМО...'
         };
+
+        function getSafeNextPath(value) {
+            if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+            try {
+                const basePath = new URL('.', window.location.href).pathname;
+                const destination = new URL(value.slice(1), `${window.location.origin}${basePath}`);
+                if (destination.origin !== window.location.origin ||
+                    !destination.pathname.startsWith(basePath) ||
+                    destination.pathname === `${basePath}login.html` ||
+                    destination.pathname === `${basePath}login`) return null;
+                return `${destination.pathname}${destination.search}${destination.hash}`;
+            } catch {
+                return null;
+            }
+        }
+
+        function readGuestUsers() {
+            try {
+                return JSON.parse(localStorage.getItem(GUEST_USERS_KEY) || '[]');
+            } catch {
+                return [];
+            }
+        }
+
+        function writeGuestUsers(users) {
+            localStorage.setItem(GUEST_USERS_KEY, JSON.stringify(users));
+        }
+
+        function setGuestSession(user, remember) {
+            const payload = {
+                uuid: user.uuid,
+                playerName: user.playerName,
+                sessionToken: user.sessionToken,
+                expiresAt: user.expiresAt
+            };
+
+            sessionStorage.clear();
+            sessionStorage.setItem(SITE_SESSION_KEY, payload.sessionToken);
+            sessionStorage.setItem('uuid', payload.uuid);
+            sessionStorage.setItem('playerName', payload.playerName);
+            sessionStorage.setItem('isGuest', 'true');
+            sessionStorage.setItem('mvdefGuestSession', JSON.stringify(payload));
+            sessionStorage.setItem('mvdefSessionExpiresAt', String(payload.expiresAt));
+
+            if (remember) {
+                localStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(payload));
+            } else {
+                localStorage.removeItem(GUEST_SESSION_KEY);
+            }
+        }
+
+        async function guestAuth(path, credentials) {
+            const response = await fetch(`${CLOUDFLARE_API_URL}${path}`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(credentials)
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                const error = new Error(result.error?.message || 'Не вдалося виконати вхід.');
+                error.status = response.status;
+                error.code = result.error?.code;
+                throw error;
+            }
+            return result;
+        }
+
+        function switchGuestMode(mode) {
+            const isRegister = mode === 'register';
+            guestModeButtons.forEach(button => {
+                const active = button.dataset.mode === mode;
+                button.classList.toggle('is-active', active);
+                button.setAttribute('aria-pressed', String(active));
+            });
+
+            guestSubmitButton.textContent = isRegister ? 'Зареєструватися' : 'Увійти';
+            guestToggleLink.textContent = isRegister ? 'У мене вже є акаунт' : 'Зареєструватися';
+            guestSwitchPrompt.textContent = isRegister ? 'Вже є акаунт?' : 'Ще не маєш акаунта?';
+            guestAuthForm.dataset.mode = mode;
+        }
+
+        guestModeButtons.forEach(button => {
+            button.addEventListener('click', () => switchGuestMode(button.dataset.mode));
+        });
+
+        guestToggleLink.addEventListener('click', () => {
+            const nextMode = guestAuthForm.dataset.mode === 'register' ? 'login' : 'register';
+            switchGuestMode(nextMode);
+        });
+
+        guestAuthForm.addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const mode = guestAuthForm.dataset.mode || 'login';
+            const email = guestEmailInput.value.trim().toLowerCase();
+            const password = guestPasswordInput.value.trim();
+
+            if (!email || !password) {
+                status.textContent = 'Введи пошту та пароль.';
+                status.className = 'status error';
+                return;
+            }
+
+            if (!email.includes('@') || !email.includes('.')) {
+                status.textContent = 'Електронна пошта має бути вірною.';
+                status.className = 'status error';
+                return;
+            }
+
+            if (password.length < 6) {
+                status.textContent = 'Пароль має містити щонайменше 6 символів.';
+                status.className = 'status error';
+                return;
+            }
+
+            const legacyUser = mode === 'login'
+                ? readGuestUsers().find(user => user.email === email && user.password === password)
+                : null;
+
+            try {
+                let result;
+                if (mode === 'register') {
+                    result = await guestAuth('/api/login/guest/register', { email, password });
+                } else {
+                    try {
+                        result = await guestAuth('/api/login/guest/exchange', { email, password });
+                    } catch (error) {
+                        if (!legacyUser || error.status !== 401) throw error;
+                        result = await guestAuth('/api/login/guest/register', { email, password });
+                    }
+                }
+
+                await signOut(auth).catch(error => {
+                    console.warn('Не вдалося завершити попередній Firebase-сеанс:', error);
+                });
+                if (legacyUser) {
+                    writeGuestUsers(readGuestUsers().filter(user => user.uuid !== legacyUser.uuid));
+                }
+                setGuestSession(result, guestRememberInput.checked);
+                status.textContent = mode === 'register'
+                    ? 'Акаунт створено. Вітаємо в MVDeF!'
+                    : 'Вхід виконано.';
+                status.className = 'status success';
+                window.location.href = getSafeNextPath(requestedNext) || 'cabinet.html';
+            } catch (error) {
+                console.error('Не вдалося виконати вхід гостьового акаунта:', error);
+                status.textContent = error.message || 'Не вдалося підключитися для входу. Спробуй ще раз пізніше.';
+                status.className = 'status error';
+            }
+        });
 
         document.getElementById('demoLogo').addEventListener('click', async () => {
             demoLogoClicks += 1;
@@ -48,6 +245,7 @@
                     await signOut(auth).catch(error => {
                         console.warn('Не вдалося завершити попередній Firebase-сеанс:', error);
                     });
+                    localStorage.removeItem(GUEST_SESSION_KEY);
                     sessionStorage.setItem('uuid', 'demo-user');
                     sessionStorage.setItem('playerName', 'Demo');
                     sessionStorage.setItem('isDemo', 'true');
@@ -80,29 +278,24 @@
             }
         });
 
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get('token');
-        const requestedNext = params.get('next');
-        const status = document.getElementById('status');
-
-        function getSafeNextPath(value) {
-            if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+        const storedGuest = (() => {
             try {
-                const basePath = new URL('.', window.location.href).pathname;
-                const destination = new URL(value.slice(1), `${window.location.origin}${basePath}`);
-                if (destination.origin !== window.location.origin ||
-                    !destination.pathname.startsWith(basePath) ||
-                    destination.pathname === `${basePath}login.html` ||
-                    destination.pathname === `${basePath}login`) return null;
-                return `${destination.pathname}${destination.search}${destination.hash}`;
+                return JSON.parse(localStorage.getItem(GUEST_SESSION_KEY) || 'null');
             } catch {
                 return null;
             }
+        })();
+
+        if (storedGuest?.sessionToken && Number.isFinite(storedGuest.expiresAt) && storedGuest.expiresAt > Date.now()) {
+            setGuestSession(storedGuest, true);
+            window.location.href = getSafeNextPath(requestedNext) || 'cabinet.html';
+        } else if (storedGuest) {
+            localStorage.removeItem(GUEST_SESSION_KEY);
         }
 
         if (!token) {
-            status.textContent = 'Токен не знайдено. Введи //empire на сервері.';
-            status.className = 'status error';
+            status.textContent = 'Введи //empire на сервері або увійди через локальний акаунт нижче.';
+            status.className = 'status info';
         } else {
             status.textContent = 'Перевіряємо токен...';
             status.className = 'status info';
@@ -126,6 +319,8 @@
                     await signOut(auth).catch(error => {
                         console.warn('Не вдалося завершити попередній Firebase-сеанс:', error);
                     });
+                    localStorage.removeItem(GUEST_SESSION_KEY);
+                    sessionStorage.clear();
                     sessionStorage.setItem(SITE_SESSION_KEY, sessionToken);
                     sessionStorage.setItem('uuid', uuid);
                     sessionStorage.setItem('playerName', playerName);
@@ -143,6 +338,8 @@
                     status.className = 'status error';
                 });
         }
+
+        switchGuestMode('login');
     </script>
 </body>
 </html>

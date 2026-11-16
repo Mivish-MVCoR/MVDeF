@@ -64,7 +64,7 @@ const gameResultText = {
 async function apiCall(path, { method = "GET", body } = {}) {
     const token = sessionStorage.getItem(SITE_SESSION_KEY);
     if (!token) {
-        const error = new Error("Увійди через Minecraft.");
+        const error = new Error("Увійди через Minecraft або гостьовий акаунт.");
         error.code = "unauthenticated";
         throw error;
     }
@@ -113,21 +113,27 @@ function readableError(error) {
 }
 
 function showLoginRequired(expired = false, isDemo = false) {
+    const isGuest = sessionStorage.getItem("isGuest") === "true";
     elements.fishingLoading.hidden = true;
     elements.fishingLoadError.hidden = true;
     elements.fishingLayout.hidden = true;
     elements.fishingProfileChip.hidden = true;
     elements.fishingAuthRequired.hidden = false;
     elements.fishingAuthMessage.textContent = expired
-        ? "Термін входу завершився. Введи //empire на сервері, відкрий нове посилання, а потім повернись сюди через кабінет."
+        ? isGuest
+            ? "Гостьовий сеанс завершився. Увійди в гостьовий акаунт знову, а потім повернись до риболовлі."
+            : "Термін входу завершився. Введи //empire на сервері, відкрий нове посилання, а потім повернись сюди через кабінет."
         : isDemo
             ? "Демо-режим не має доступу до рибальських даних. Увійди через посилання, отримане командою //empire на сервері."
-            : "Введи //empire на сервері та відкрий отримане посилання в цьому браузері. Після входу повернись до риболовлі через кабінет.";
+            : "Увійди через посилання з Minecraft або через гостьовий акаунт, а потім повернись до риболовлі.";
     if (expired) {
         sessionStorage.removeItem(SITE_SESSION_KEY);
         sessionStorage.removeItem("uuid");
         sessionStorage.removeItem("playerName");
+        sessionStorage.removeItem("isGuest");
+        sessionStorage.removeItem("mvdefGuestSession");
         sessionStorage.removeItem("mvdefSessionExpiresAt");
+        if (isGuest) localStorage.removeItem("mvdefGuestSession");
     }
 }
 
