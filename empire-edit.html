@@ -28,6 +28,14 @@
         </header>
         <div class="management-layout empire-layout">
             <form id="empireForm" class="card management-form">
+                <div class="binding-code-card">
+                    <p class="binding-code-label">Ваш код прив'язки</p>
+                    <div class="binding-code-row">
+                        <input id="bindingCodeDisplay" type="text" readonly aria-label="Код прив'язки">
+                        <button id="copyBindingCodeBtn" class="btn-secondary" type="button">Копіювати</button>
+                    </div>
+                    <div id="bindingCodeStatus" class="binding-code-status" aria-live="polite"></div>
+                </div>
                 <div class="form-field">
                     <label for="empireAvatarFile">Аватар імперії</label>
                     <div class="avatar-picker">

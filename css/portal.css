@@ -243,6 +243,53 @@ body {
     border-radius: 10px;
 }
 
+.binding-code-card {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 16px 18px;
+    border: 1px solid rgba(167, 217, 154, 0.2);
+    border-radius: 12px;
+    background: rgba(11, 17, 13, 0.7);
+}
+
+.binding-code-label {
+    margin: 0;
+    color: var(--green);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.binding-code-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.binding-code-row input {
+    flex: 1;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid rgba(167, 217, 154, 0.22);
+    border-radius: 8px;
+    background: rgba(10, 15, 12, 0.9);
+    color: var(--text);
+    font: 700 1rem/1.3 "Consolas", "Segoe UI", sans-serif;
+    letter-spacing: 0.12em;
+}
+
+.binding-code-status {
+    min-height: 18px;
+    color: var(--green);
+    font-size: 0.82rem;
+}
+
+.binding-code-status.error {
+    color: #ff9c9c;
+}
+
 .card-label,
 .section-label {
     color: var(--green);

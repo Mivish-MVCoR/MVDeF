@@ -52,6 +52,20 @@
 
         .navbar nav a:hover { color: #e0e0e0; }
 
+        .nav-login-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #4ade80;
+            color: #0a0e17;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-left: 12px;
+        }
+
+        .nav-login-link:hover { color: #0a0e17 !important; opacity: 0.9; }
+
         .container {
             max-width: 900px;
             margin: 0 auto;
@@ -209,10 +223,12 @@
             </div>
         </div>
         <nav>
+            <a href="minecraft-bind.html" title="Прив'язати Minecraft-профіль">Прив'язати М-П</a>
             <a href="cabinet.html">Кабінет</a>
             <a href="map.html">Карта</a>
             <a href="roles.html" id="rolesLink" hidden>Ролі</a>
             <a href="empire-edit.html" id="editEmpireLink" hidden>Правління</a>
+            <a href="login.html" id="guestLoginLink" class="nav-login-link">Увійти</a>
             <a href="#" id="logoutBtn">Вийти</a>
         </nav>
     </header>
@@ -229,7 +245,7 @@
                 <a href="empire-create.html" class="btn-map" id="createEmpireLink" hidden>Створити правління →</a>
             </div>
 
-            <div class="card">
+            <div class="card" id="statusCard">
                 <div class="card-label">Статус</div>
                 <div id="statusContent"><div class="empty">Завантаження...</div></div>
             </div>
@@ -239,6 +255,17 @@
                 <h2 class="section-title">Риболовля</h2>
                 <p class="sub">Відпочинь і випробуй удачу на водоймі.</p>
                 <a class="btn-map" href="fishing.html">Відкрити риболовлю →</a>
+            </section>
+
+            <section class="card" id="rouletteCard">
+                <div class="card-label">Мінігра</div>
+                <h2 class="section-title">Рулетка</h2>
+                <p class="sub">Кинь виклик іншому гравцю та зіграй у дуель.</p>
+                <p id="rouletteGuestWarning" class="sub" role="note" hidden>
+                    Щоб грати, потрібен зареєстрований Minecraft-профіль. На сервері виконай
+                    <code>//empire</code> і увійди за отриманим посиланням.
+                </p>
+                <a class="btn-map" href="rulet/">Відкрити рулетку →</a>
             </section>
 
             <div class="card full">
@@ -254,13 +281,57 @@
         import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import './js/moderator-shortcut.js';
 
-        const uuid = sessionStorage.getItem('uuid');
-        const playerName = sessionStorage.getItem('playerName');
+        let uuid = sessionStorage.getItem('uuid');
+        let playerName = sessionStorage.getItem('playerName');
+        const guestLoginLink = document.getElementById('guestLoginLink');
+        let isGuestSession = sessionStorage.getItem('isGuest') === 'true';
+
+        if (!uuid) {
+            const guestSessionRaw = localStorage.getItem('mvdefGuestSession');
+            if (guestSessionRaw) {
+                try {
+                    const guestSession = JSON.parse(guestSessionRaw);
+                    if (guestSession?.uuid && guestSession.sessionToken &&
+                        Number.isFinite(guestSession.expiresAt) && guestSession.expiresAt > Date.now()) {
+                        sessionStorage.setItem('uuid', guestSession.uuid);
+                        sessionStorage.setItem('playerName', guestSession.playerName || guestSession.email || 'Гість');
+                        sessionStorage.setItem('mvdefSessionToken', guestSession.sessionToken);
+                        sessionStorage.setItem('isGuest', 'true');
+                        sessionStorage.setItem('mvdefSessionExpiresAt', String(guestSession.expiresAt));
+                        isGuestSession = true;
+                        uuid = guestSession.uuid;
+                        playerName = sessionStorage.getItem('playerName');
+                    } else {
+                        localStorage.removeItem('mvdefGuestSession');
+                    }
+                } catch (error) {
+                    console.warn('Не вдалося відновити локальний сеанс гостя:', error);
+                }
+            }
+        }
 
         if (!uuid) { window.location.href = 'login.html'; }
 
+        if (guestLoginLink) guestLoginLink.hidden = Boolean(uuid);
+
         document.getElementById('greetingName').textContent = `Вітаємо, ${playerName || 'Гравець'}`;
         let logoClicks = 0;
+        const empireCard = document.getElementById('empireCard');
+        const statusCard = document.getElementById('statusCard');
+        const notifications = document.getElementById('notifications');
+
+        if (isGuestSession) {
+            empireCard.hidden = true;
+            statusCard.hidden = true;
+            document.getElementById('rouletteGuestWarning').hidden = false;
+            notifications.innerHTML = `
+                <div class="notif-item">
+                    <div class="notif-dot"></div>
+                    <span>Ви можете прив'язати свій Minecraft-профіль до цього акаунта.</span>
+                </div>
+            `;
+        }
+
         const logoEasterEggMessages = {
             5: 'Ну що ти тут робиш, що ти хотів знайти',
             7: 'Ну що ти хочеш ?',
@@ -305,121 +376,123 @@
             }
         });
 
-        // Завантажуємо імперію
-        const empiresSnap = await get(ref(db, 'mvdef/empires'));
-        let myEmpire = null;
-        let myEmpireId = null;
+        if (!isGuestSession) {
+            // Завантажуємо імперію
+            const empiresSnap = await get(ref(db, 'mvdef/empires'));
+            let myEmpire = null;
+            let myEmpireId = null;
 
-        empiresSnap.forEach(child => {
-            if (child.val().ownerUuid === uuid) {
-                myEmpire = child.val();
-                myEmpireId = child.key;
-            }
-        });
-
-        const empireContent = document.getElementById('empireContent');
-        const statusContent = document.getElementById('statusContent');
-
-        if (myEmpire) {
-            document.getElementById('rolesLink').hidden = false;
-            document.getElementById('editEmpireLink').hidden = false;
-            const chunksSnap = await get(ref(db, 'mvdef/chunks'));
-            let chunkCount = 0;
-            chunksSnap.forEach(child => {
-                const c = child.val();
-                if (c.empireId === myEmpireId && c.status === 'active') chunkCount++;
-            });
-
-            const empireHeading = document.createElement('h2');
-            empireHeading.textContent = myEmpire.name || 'Без назви';
-            const empireDetails = [];
-            if (myEmpire.avatar?.startsWith('data:image/jpeg;base64,')) {
-                const avatar = document.createElement('img');
-                avatar.className = 'cabinet-empire-avatar';
-                avatar.src = myEmpire.avatar;
-                avatar.alt = `Аватар ${myEmpire.name}`;
-                empireDetails.push(avatar);
-            }
-            if (myEmpire.description) {
-                const description = document.createElement('p');
-                description.className = 'sub';
-                description.textContent = myEmpire.description;
-                empireDetails.push(description);
-            }
-            const emperor = document.createElement('p');
-            emperor.className = 'sub';
-            emperor.textContent = `Імператор: ${myEmpire.ownerName || playerName || 'Гравець'}`;
-            const mapLink = document.createElement('a');
-            mapLink.href = 'map.html';
-            mapLink.className = 'btn-map';
-            mapLink.textContent = 'Відкрити карту →';
-            empireContent.replaceChildren(...empireDetails, empireHeading, emperor, mapLink);
-
-            statusContent.innerHTML = `
-                <div class="stat-row">
-                    <span class="stat-label">Статус</span>
-                    <span class="status-online">NODE / ONLINE</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Чанків</span>
-                    <span class="stat-value">${chunkCount}</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">ID Імперії</span>
-                    <span class="stat-value">${myEmpireId}</span>
-                </div>
-            `;
-        } else {
-            const pendingEmpireRequest = await get(ref(db, `mvdef/empireRequests/${uuid}`));
-            if (pendingEmpireRequest.exists()) {
-                const request = pendingEmpireRequest.val();
-                const organizationNames = {
-                    empire: 'імперії', city: 'міста', village: 'села', country: 'країни'
-                };
-                const organizationName = organizationNames[request.organizationLevel] || 'правління';
-                empireContent.replaceChildren();
-                const pendingName = document.createElement('h2');
-                pendingName.textContent = request.name || 'Нове правління';
-                const pendingDescription = document.createElement('p');
-                pendingDescription.className = 'sub';
-                pendingDescription.textContent = `Заявка на створення ${organizationName} очікує на розгляд модератора.`;
-                empireContent.append(pendingName, pendingDescription);
-                statusContent.innerHTML = '<p class="status-pending">Очікує на розгляд модератора</p>';
-            } else {
-                empireContent.innerHTML = `
-                    <p class="empty">У вас немає імперії.</p>
-                    <p class="sub" style="margin-top:8px">Створи правління та дочекайся підтвердження модератора.</p>
-                `;
-                document.getElementById('createEmpireLink').hidden = false;
-                statusContent.innerHTML = `<p class="empty">—</p>`;
-            }
-        }
-
-        // Сповіщення
-        const notifSnap = await get(ref(db, `mvdef/notifications/${uuid}`));
-        const notifDiv = document.getElementById('notifications');
-
-        if (!notifSnap.exists()) {
-            notifDiv.innerHTML = '<div class="empty">Сповіщень немає.</div>';
-        } else {
-            let html = '';
-            const updates = {};
-
-            notifSnap.forEach(child => {
-                const n = child.val();
-                html += `
-                    <div class="notif-item">
-                        <div class="notif-dot ${n.read ? 'read' : ''}"></div>
-                        <span>${n.message}</span>
-                    </div>
-                `;
-                if (!n.read) {
-                    updates[`mvdef/notifications/${uuid}/${child.key}/read`] = true;
+            empiresSnap.forEach(child => {
+                if (child.val().ownerUuid === uuid) {
+                    myEmpire = child.val();
+                    myEmpireId = child.key;
                 }
             });
 
-            notifDiv.innerHTML = html;
-            if (Object.keys(updates).length > 0) update(ref(db), updates);
+            const empireContent = document.getElementById('empireContent');
+            const statusContent = document.getElementById('statusContent');
+
+            if (myEmpire) {
+                document.getElementById('rolesLink').hidden = false;
+                document.getElementById('editEmpireLink').hidden = false;
+                const chunksSnap = await get(ref(db, 'mvdef/chunks'));
+                let chunkCount = 0;
+                chunksSnap.forEach(child => {
+                    const c = child.val();
+                    if (c.empireId === myEmpireId && c.status === 'active') chunkCount++;
+                });
+
+                const empireHeading = document.createElement('h2');
+                empireHeading.textContent = myEmpire.name || 'Без назви';
+                const empireDetails = [];
+                if (myEmpire.avatar?.startsWith('data:image/jpeg;base64,')) {
+                    const avatar = document.createElement('img');
+                    avatar.className = 'cabinet-empire-avatar';
+                    avatar.src = myEmpire.avatar;
+                    avatar.alt = `Аватар ${myEmpire.name}`;
+                    empireDetails.push(avatar);
+                }
+                if (myEmpire.description) {
+                    const description = document.createElement('p');
+                    description.className = 'sub';
+                    description.textContent = myEmpire.description;
+                    empireDetails.push(description);
+                }
+                const emperor = document.createElement('p');
+                emperor.className = 'sub';
+                emperor.textContent = `Імператор: ${myEmpire.ownerName || playerName || 'Гравець'}`;
+                const mapLink = document.createElement('a');
+                mapLink.href = 'map.html';
+                mapLink.className = 'btn-map';
+                mapLink.textContent = 'Відкрити карту →';
+                empireContent.replaceChildren(...empireDetails, empireHeading, emperor, mapLink);
+
+                statusContent.innerHTML = `
+                    <div class="stat-row">
+                        <span class="stat-label">Статус</span>
+                        <span class="status-online">NODE / ONLINE</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Чанків</span>
+                        <span class="stat-value">${chunkCount}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">ID Імперії</span>
+                        <span class="stat-value">${myEmpireId}</span>
+                    </div>
+                `;
+            } else {
+                const pendingEmpireRequest = await get(ref(db, `mvdef/empireRequests/${uuid}`));
+                if (pendingEmpireRequest.exists()) {
+                    const request = pendingEmpireRequest.val();
+                    const organizationNames = {
+                        empire: 'імперії', city: 'міста', village: 'села', country: 'країни'
+                    };
+                    const organizationName = organizationNames[request.organizationLevel] || 'правління';
+                    empireContent.replaceChildren();
+                    const pendingName = document.createElement('h2');
+                    pendingName.textContent = request.name || 'Нове правління';
+                    const pendingDescription = document.createElement('p');
+                    pendingDescription.className = 'sub';
+                    pendingDescription.textContent = `Заявка на створення ${organizationName} очікує на розгляд модератора.`;
+                    empireContent.append(pendingName, pendingDescription);
+                    statusContent.innerHTML = '<p class="status-pending">Очікує на розгляд модератора</p>';
+                } else {
+                    empireContent.innerHTML = `
+                        <p class="empty">У вас немає імперії.</p>
+                        <p class="sub" style="margin-top:8px">Створи правління та дочекайся підтвердження модератора.</p>
+                    `;
+                    document.getElementById('createEmpireLink').hidden = false;
+                    statusContent.innerHTML = `<p class="empty">—</p>`;
+                }
+            }
+
+            // Сповіщення
+            const notifSnap = await get(ref(db, `mvdef/notifications/${uuid}`));
+            const notifDiv = document.getElementById('notifications');
+
+            if (!notifSnap.exists()) {
+                notifDiv.innerHTML = '<div class="empty">Сповіщень немає.</div>';
+            } else {
+                let html = '';
+                const updates = {};
+
+                notifSnap.forEach(child => {
+                    const n = child.val();
+                    html += `
+                        <div class="notif-item">
+                            <div class="notif-dot ${n.read ? 'read' : ''}"></div>
+                            <span>${n.message}</span>
+                        </div>
+                    `;
+                    if (!n.read) {
+                        updates[`mvdef/notifications/${uuid}/${child.key}/read`] = true;
+                    }
+                });
+
+                notifDiv.innerHTML = html;
+                if (Object.keys(updates).length > 0) update(ref(db), updates);
+            }
         }
     </script>
     <script type="module" src="js/logout.js"></script>

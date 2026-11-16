@@ -18,6 +18,9 @@ commands:
   /listallplayer:
     description: Список усіх гравців та видалення їх даних
     usage: "//listallplayer [сторінка] або //listallplayer remove <нік>"
+  rulet:
+    description: Викликати гравця на дуель у рулетку
+    usage: /rulet <нік> [ставка]
 permissions:
   mvdef.players.list:
     description: Перегляд списку гравців
@@ -25,3 +28,6 @@ permissions:
   mvdef.players.remove:
     description: Видалення даних гравця
     default: op
+  rulet.use:
+    description: Використання рулетки
+    default: true

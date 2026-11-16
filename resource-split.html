@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Розподіл ресурсів</title>
+    <script src="js/theme.js" defer></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0e17;
+            color: #edf2ee;
+        }
+        .navbar {
+            background: rgba(10,14,23,0.95);
+            border-bottom: 1px solid rgba(167,217,154,0.14);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #a7d99a;
+            font-weight: 700;
+            text-decoration: none;
+            letter-spacing: 0.05em;
+        }
+        .logo-mark {
+            width: 28px;
+            height: 28px;
+        }
+        .navbar nav {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .navbar nav a {
+            color: #a4b3c6;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .navbar nav a:hover { color: #fff; }
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 48px 24px 64px;
+        }
+        .panel {
+            background: rgba(16, 23, 31, 0.96);
+            border: 1px solid rgba(167,217,154,0.18);
+            border-radius: 18px;
+            padding: 28px 24px;
+            box-shadow: 0 14px 32px rgba(0,0,0,0.18);
+        }
+        .eyebrow {
+            margin: 0 0 8px;
+            color: #a7d99a;
+            font-size: 0.78rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        h1 {
+            margin: 0 0 12px;
+            font-size: clamp(2rem, 3vw, 2.5rem);
+        }
+        .subtitle {
+            margin: 0 0 26px;
+            color: #b3c0cf;
+            line-height: 1.6;
+        }
+        .resource-table {
+            display: grid;
+            gap: 14px;
+        }
+        .resource-row {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr;
+            gap: 12px;
+            align-items: center;
+            padding: 18px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(167,217,154,0.13);
+            background: rgba(12, 17, 22, 0.8);
+        }
+        .resource-name {
+            font-weight: 700;
+            color: #e7f7e5;
+        }
+        .choice {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(167,217,154,0.04);
+            border: 1px solid rgba(167,217,154,0.12);
+            color: #dce9f0;
+        }
+        .choice input {
+            accent-color: #a7d99a;
+            width: 16px;
+            height: 16px;
+        }
+        .warning {
+            margin-top: 20px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: rgba(242, 102, 102, 0.08);
+            border: 1px solid rgba(242, 102, 102, 0.2);
+            color: #ffbdc0;
+            line-height: 1.5;
+        }
+        .submit-btn {
+            margin-top: 22px;
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 18px;
+            background: linear-gradient(135deg, #a7d99a, #46c47d);
+            color: #0b140d;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .save-status {
+            min-height: 18px;
+            margin-top: 14px;
+            color: #b8ecc3;
+        }
+        @media (max-width: 720px) {
+            .resource-row {
+                grid-template-columns: 1fr;
+                justify-items: flex-start;
+            }
+            .navbar { padding: 14px 18px; }
+            .navbar nav { gap: 10px; flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar">
+        <a class="logo" href="cabinet.html" aria-label="MVDeF — кабінет">
+            <img class="logo-mark" src="assets/mvdef-mark.svg" alt="">
+            <span>MVDeF</span>
+        </a>
+        <nav>
+            <a href="cabinet.html">Кабінет</a>
+            <a href="map.html">Карта</a>
+            <a href="minecraft-bind.html">Прив'язка</a>
+        </nav>
+    </header>
+
+    <main class="page">
+        <section class="panel">
+            <p class="eyebrow">Розподіл ресурсів</p>
+            <h1>Розподіл ресурсів між обліковими записами</h1>
+            <p class="subtitle">
+                Вибери, які ресурси будуть залишені локальному обліковому запису, а які — Minecraft-профілю.
+                Нік для профілю залишиться майнкрафтовським.
+            </p>
+
+            <div class="resource-table" id="resourceTable">
+                <div class="resource-row">
+                    <div class="resource-name">Рибалка</div>
+                    <label class="choice"><input type="radio" name="Рибалка" value="guest" checked> Гість</label>
+                    <label class="choice"><input type="radio" name="Рибалка" value="minecraft"> Нік з Minecraft</label>
+                </div>
+                <div class="resource-row">
+                    <div class="resource-name">Рулетка</div>
+                    <label class="choice"><input type="radio" name="Рулетка" value="guest" checked> Гість</label>
+                    <label class="choice"><input type="radio" name="Рулетка" value="minecraft"> Нік з Minecraft</label>
+                </div>
+            </div>
+
+            <div class="warning">
+                Нік для профілю залишиться майнкрафтовським.
+            </div>
+
+            <button id="saveSplitBtn" class="submit-btn" type="button">Зберегти розподіл</button>
+            <div id="saveStatus" class="save-status" aria-live="polite"></div>
+        </section>
+    </main>
+
+    <script>
+        const BINDING_ACCEPTED_KEY = 'mvdefGuestBindingAccepted';
+        const SPLIT_KEY = 'mvdefGuestResourceSplit';
+
+        if (localStorage.getItem(BINDING_ACCEPTED_KEY) !== 'true') {
+            window.location.href = 'minecraft-bind.html';
+        }
+
+        function syncRadioGroup(name, selectedValue) {
+            const boxes = document.querySelectorAll(`input[name="${name}"]`);
+            boxes.forEach(box => {
+                box.checked = box.value === selectedValue;
+            });
+        }
+
+        const savedSplit = (() => {
+            try { return JSON.parse(localStorage.getItem(SPLIT_KEY) || '{}'); }
+            catch { return {}; }
+        })();
+
+        const resources = ['Рибалка', 'Рулетка'];
+        resources.forEach(resource => {
+            const selected = savedSplit[resource] || 'guest';
+            syncRadioGroup(resource, selected);
+        });
+
+        document.querySelectorAll('input[type="radio"]').forEach(input => {
+            input.addEventListener('change', () => {
+                const options = document.querySelectorAll(`input[name="${input.name}"]`);
+                options.forEach(option => {
+                    option.checked = option === input;
+                });
+            });
+        });
+
+        document.getElementById('saveSplitBtn').addEventListener('click', () => {
+            const split = {};
+            resources.forEach(resource => {
+                const checked = document.querySelector(`input[name="${resource}"]:checked`);
+                split[resource] = checked ? checked.value : 'guest';
+            });
+
+            localStorage.setItem(SPLIT_KEY, JSON.stringify(split));
+            sessionStorage.setItem('mvdefGuestResourceSplit', JSON.stringify(split));
+            document.getElementById('saveStatus').textContent = 'Розподіл ресурсів збережено.';
+        });
+    </script>
+</body>
+</html>

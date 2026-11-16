@@ -56,6 +56,20 @@
 
         .navbar nav a:hover { color: #e0e0e0; }
 
+        .nav-login-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #4ade80;
+            color: #0a0e17;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-left: 12px;
+        }
+
+        .nav-login-link:hover { color: #0a0e17 !important; opacity: 0.9; }
+
         .map-toolbar {
             background: rgba(10,14,23,0.9);
             border-bottom: 1px solid #1a2540;
@@ -148,6 +162,7 @@
         <nav>
             <a href="cabinet.html">Кабінет</a>
             <a href="map.html">Карта</a>
+            <a href="login.html" id="guestLoginLink" class="nav-login-link">Увійти</a>
             <a href="#" id="logoutBtn">Вийти</a>
         </nav>
     </header>
@@ -220,8 +235,36 @@
         import { ref, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         import './js/moderator-shortcut.js';
 
-        const uuid = sessionStorage.getItem('uuid');
+        let uuid = sessionStorage.getItem('uuid');
+        const guestLoginLink = document.getElementById('guestLoginLink');
+        let isGuestSession = sessionStorage.getItem('isGuest') === 'true';
+
+        if (!uuid) {
+            const guestSessionRaw = localStorage.getItem('mvdefGuestSession');
+            if (guestSessionRaw) {
+                try {
+                    const guestSession = JSON.parse(guestSessionRaw);
+                    if (guestSession?.uuid) {
+                        sessionStorage.setItem('uuid', guestSession.uuid);
+                        sessionStorage.setItem('playerName', guestSession.playerName || guestSession.email || 'Гість');
+                        sessionStorage.setItem('mvdefSessionToken', guestSession.sessionToken || `guest-${guestSession.uuid}`);
+                        sessionStorage.setItem('isGuest', 'true');
+                        isGuestSession = true;
+                        uuid = guestSession.uuid;
+                    }
+                } catch (error) {
+                    console.warn('Не вдалося відновити локальний сеанс гостя:', error);
+                }
+            }
+        }
+
         if (!uuid) { window.location.href = 'login.html'; }
+        if (guestLoginLink) guestLoginLink.hidden = Boolean(uuid);
+
+        const selectionSummary = document.querySelector('.selection-summary');
+        if (isGuestSession && selectionSummary) {
+            selectionSummary.hidden = true;
+        }
 
         const canvas = document.getElementById('mapCanvas');
         const ctx = canvas.getContext('2d');
@@ -458,6 +501,17 @@
         }
 
         async function loadData() {
+            if (isGuestSession) {
+                document.getElementById('empireId').textContent = 'РЕЖИМ ПЕРЕГЛЯДУ';
+                document.getElementById('empireName').textContent = 'Гість';
+                document.getElementById('playerName').textContent = sessionStorage.getItem('playerName') || 'Гравець';
+                document.getElementById('empireChunkCount').textContent = '—';
+                document.getElementById('coordsInfo').textContent = 'Карта: перегляд';
+                if (selectionSummary) selectionSummary.hidden = true;
+                draw();
+                return;
+            }
+
             const biomesSnap = await get(ref(db, 'mvdef/map'));
             biomesSnap.forEach(child => {
                 biomes[child.key] = child.val().color || BIOME_COLORS['default'];
@@ -539,41 +593,43 @@
                 ctx.globalAlpha = 1;
             }
 
-            for (let cx = WORLD_MIN; cx < WORLD_MAX; cx++) {
-                for (let cz = WORLD_MIN; cz < WORLD_MAX; cz++) {
-                    const pos = chunkToCanvas(cx, cz);
-                    if (pos.x + CHUNK_SIZE < 0 || pos.x > canvas.width) continue;
-                    if (pos.y + CHUNK_SIZE < 0 || pos.y > canvas.height) continue;
+            if (!isGuestSession) {
+                for (let cx = WORLD_MIN; cx < WORLD_MAX; cx++) {
+                    for (let cz = WORLD_MIN; cz < WORLD_MAX; cz++) {
+                        const pos = chunkToCanvas(cx, cz);
+                        if (pos.x + CHUNK_SIZE < 0 || pos.x > canvas.width) continue;
+                        if (pos.y + CHUNK_SIZE < 0 || pos.y > canvas.height) continue;
 
-                    const key = `world_${cx}_${cz}`;
-                    const chunk = chunks[key];
-                    const biomeColor = biomes[key] || BIOME_COLORS['default'];
-                    const isSelected = selected.has(key);
+                        const key = `world_${cx}_${cz}`;
+                        const chunk = chunks[key];
+                        const biomeColor = biomes[key] || BIOME_COLORS['default'];
+                        const isSelected = selected.has(key);
 
-                    if (chunk && chunk.status === 'active') {
-                        ctx.fillStyle = empires[chunk.empireId]?.color || '#627069';
-                    } else if (chunk && chunk.status === 'pending') {
-                        ctx.fillStyle = '#d1b65e';
-                    } else {
-                        ctx.fillStyle = isSelected ? '#ffffff' : biomeColor;
+                        if (chunk && chunk.status === 'active') {
+                            ctx.fillStyle = empires[chunk.empireId]?.color || '#627069';
+                        } else if (chunk && chunk.status === 'pending') {
+                            ctx.fillStyle = '#d1b65e';
+                        } else {
+                            ctx.fillStyle = isSelected ? '#ffffff' : biomeColor;
+                        }
+
+                        ctx.globalAlpha = worldMapImage && worldMapToggle.checked ? (
+                            isSelected ? 0.82 : chunk?.status === 'pending' ? 0.82 : chunk?.status === 'active' ? 0.78 : 0.48
+                        ) : 1;
+                        ctx.fillRect(pos.x, pos.y, CHUNK_SIZE - 1, CHUNK_SIZE - 1);
+                        ctx.globalAlpha = 1;
+
+                        if (isSelected) {
+                            ctx.strokeStyle = '#a7d99a';
+                            ctx.lineWidth = 0.5;
+                            ctx.strokeRect(pos.x, pos.y, CHUNK_SIZE - 1, CHUNK_SIZE - 1);
+                        }
                     }
 
-                    ctx.globalAlpha = worldMapImage && worldMapToggle.checked ? (
-                        isSelected ? 0.82 : chunk?.status === 'pending' ? 0.82 : chunk?.status === 'active' ? 0.78 : 0.48
-                    ) : 1;
-                    ctx.fillRect(pos.x, pos.y, CHUNK_SIZE - 1, CHUNK_SIZE - 1);
-                    ctx.globalAlpha = 1;
-
-                    if (isSelected) {
-                        ctx.strokeStyle = '#a7d99a';
-                        ctx.lineWidth = 0.5;
-                        ctx.strokeRect(pos.x, pos.y, CHUNK_SIZE - 1, CHUNK_SIZE - 1);
-                    }
+                    ctx.strokeStyle = 'rgba(167, 217, 154, 0.45)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(offsetX + 0.5, offsetY + 0.5, worldPixelSize - 1, worldPixelSize - 1);
                 }
-
-                ctx.strokeStyle = 'rgba(167, 217, 154, 0.45)';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(offsetX + 0.5, offsetY + 0.5, worldPixelSize - 1, worldPixelSize - 1);
             }
         }
 
@@ -697,6 +753,12 @@
         });
 
         canvas.addEventListener('pointerup', e => {
+            if (isGuestSession) {
+                canvas.style.cursor = 'crosshair';
+                isPointerDown = false;
+                isDragging = false;
+                return;
+            }
             if (e.pointerType === 'touch') {
                 activeTouchPointers.delete(e.pointerId);
                 if (suppressTouchSelection) {

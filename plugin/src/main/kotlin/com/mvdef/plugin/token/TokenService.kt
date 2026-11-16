@@ -2,6 +2,7 @@ package com.mvdef.plugin.token
 
 import org.bukkit.plugin.java.JavaPlugin
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -22,16 +23,20 @@ class TokenService(private val plugin: JavaPlugin) {
         .connectTimeout(Duration.ofSeconds(10))
         .build()
 
+    fun apiUrl(): String = plugin.config.getString(
+        "login-api-url",
+        "https://mvdef-fishing-api.mvdef-mc.workers.dev"
+    ).orEmpty().trimEnd('/')
+
+    fun issuerSecret(): String = System.getenv("MVDEF_LOGIN_API_SECRET")
+        ?.takeIf(String::isNotBlank)
+        ?: plugin.config.getString("login-api-secret").orEmpty()
+
     fun createSessionAsync(playerUuid: UUID, playerName: String, callback: (String?) -> Unit) {
         val token = generateToken()
         val expiresAt = (System.currentTimeMillis() / 1000) + plugin.config.getLong("token-expiry-seconds", 300)
-        val apiUrl = plugin.config.getString(
-            "login-api-url",
-            "https://mvdef-fishing-api.mvdef-mc.workers.dev"
-        ).orEmpty().trimEnd('/')
-        val issuerSecret = System.getenv("MVDEF_LOGIN_API_SECRET")
-            ?.takeIf(String::isNotBlank)
-            ?: plugin.config.getString("login-api-secret").orEmpty()
+        val apiUrl = apiUrl()
+        val issuerSecret = issuerSecret()
 
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             try {
@@ -65,8 +70,10 @@ class TokenService(private val plugin: JavaPlugin) {
         })
     }
 
-    fun buildLoginUrl(token: String): String {
-        return "https://mivish-mvcor.github.io/MVDeF/login.html?token=$token"
+    fun buildLoginUrl(token: String, next: String? = null): String {
+        val base = "https://mivish-mvcor.github.io/MVDeF/login.html?token=$token"
+        return if (next == null) base
+        else base + "&next=" + URLEncoder.encode(next, Charsets.UTF_8)
     }
 
     private fun generateToken(): String =

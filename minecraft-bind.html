@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVDeF — Прив'язка Minecraft</title>
+    <script src="js/theme.js" defer></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0e17;
+            color: #edf2ee;
+        }
+        .navbar {
+            background: rgba(10,14,23,0.95);
+            border-bottom: 1px solid rgba(167,217,154,0.14);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #a7d99a;
+            font-weight: 700;
+            text-decoration: none;
+            letter-spacing: 0.05em;
+        }
+        .logo-mark {
+            width: 28px;
+            height: 28px;
+        }
+        .navbar nav {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .navbar nav a {
+            color: #a4b3c6;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .navbar nav a:hover { color: #fff; }
+        .nav-login-link {
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: #a7d99a;
+            color: #0a0e17;
+            font-weight: 700;
+        }
+        .page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 48px 24px 64px;
+        }
+        .panel {
+            background: rgba(16, 23, 31, 0.96);
+            border: 1px solid rgba(167,217,154,0.18);
+            border-radius: 18px;
+            padding: 30px 28px;
+            box-shadow: 0 14px 32px rgba(0,0,0,0.18);
+        }
+        .eyebrow {
+            margin: 0 0 8px;
+            color: #a7d99a;
+            font-size: 0.78rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        h1 {
+            margin: 0 0 10px;
+            font-size: clamp(2rem, 3vw, 2.6rem);
+            font-weight: 800;
+        }
+        .instruction {
+            margin: 0 0 26px;
+            color: #b3c0cf;
+            line-height: 1.6;
+            max-width: 720px;
+        }
+        .binding-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 18px;
+        }
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .field label {
+            font-size: 0.82rem;
+            color: #d8e7d7;
+            font-weight: 600;
+        }
+        .code-box,
+        .field input {
+            width: 100%;
+            border: 1px solid rgba(167,217,154,0.22);
+            background: rgba(12, 17, 22, 0.92);
+            color: #edf2ee;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 1rem;
+        }
+        .code-box {
+            font-family: 'Consolas', monospace;
+            letter-spacing: 0.12em;
+        }
+        .copy-row {
+            display: flex;
+            gap: 10px;
+        }
+        .copy-row input {
+            flex: 1;
+        }
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        button:hover { opacity: 0.96; transform: translateY(-1px); }
+        .copy-button, .bind-button, .request-action {
+            padding: 12px 18px;
+            font-weight: 700;
+        }
+        .copy-button {
+            background: rgba(167,217,154,0.12);
+            color: #dff7db;
+            border: 1px solid rgba(167,217,154,0.26);
+        }
+        .bind-button {
+            margin-top: 22px;
+            width: 100%;
+            background: linear-gradient(135deg, #a7d99a, #46c47d);
+            color: #08120d;
+        }
+        .copy-status, .form-status {
+            min-height: 18px;
+            color: #b8ecc3;
+            font-size: 0.82rem;
+        }
+        .form-status.error {
+            color: #ffb4b4;
+        }
+        .request-card {
+            margin-top: 26px;
+            padding: 22px 20px;
+            border: 1px solid rgba(167,217,154,0.18);
+            border-radius: 14px;
+            background: rgba(11,17,13,0.7);
+            display: none;
+        }
+        .request-card.visible { display: block; }
+        .request-title {
+            margin: 0 0 14px;
+            font-weight: 700;
+            color: #dff7db;
+        }
+        .request-message {
+            margin: 0 0 18px;
+            line-height: 1.65;
+            color: #dce6eb;
+        }
+        .request-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .request-action.accept {
+            background: linear-gradient(135deg, #6ddf82, #51c98f);
+            color: #07140c;
+        }
+        .request-action.decline {
+            background: rgba(242, 102, 102, 0.12);
+            color: #ffb7b7;
+            border: 1px solid rgba(242,102,102,0.22);
+        }
+        @media (max-width: 760px) {
+            .binding-grid { grid-template-columns: 1fr; }
+            .navbar { padding: 14px 18px; }
+            .navbar nav { gap: 10px; flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar">
+        <a class="logo" href="cabinet.html" aria-label="MVDeF — кабінет">
+            <img class="logo-mark" src="assets/mvdef-mark.svg" alt="">
+            <span>MVDeF</span>
+        </a>
+        <nav>
+            <a href="cabinet.html">Кабінет</a>
+            <a href="map.html">Карта</a>
+            <a href="login.html" class="nav-login-link">Увійти</a>
+        </nav>
+    </header>
+
+    <main class="page">
+        <section class="panel">
+            <p class="eyebrow">Прив'язка</p>
+            <h1>Прив'язка Minecraft-профілю</h1>
+            <p class="instruction">
+                Для того, щоб активувати локальний акаунт для мінігри та квестів, прив'яжіть свій Minecraft-профіль.
+                Отримайте код, збережіть пароль від локального облікового запису, а потім відправте запит у Minecraft.
+                Після підтвердження ви зможете окремо розподілити ресурси між локальним обліковим записом і профілем Minecraft.
+            </p>
+
+            <div class="binding-grid">
+                <div class="field">
+                    <label for="bindingCode">Ваш код прив'язки</label>
+                    <input id="bindingCode" class="code-box" type="text" readonly>
+                </div>
+
+                <div class="field">
+                    <label for="guestPassword">Пароль від акаунту</label>
+                    <input id="guestPassword" type="password" placeholder="Введи пароль">
+                </div>
+            </div>
+
+            <button id="bindBtn" class="bind-button" type="button">Прив'язати</button>
+            <div id="formStatus" class="form-status" aria-live="polite"></div>
+
+            <div id="requestCard" class="request-card" aria-live="polite">
+                <p class="request-title">Повідомлення для Minecraft</p>
+                <p id="requestMessage" class="request-message"></p>
+                <div class="request-actions">
+                    <button id="acceptRequestBtn" class="request-action accept" type="button">Прийняти</button>
+                    <button id="declineRequestBtn" class="request-action decline" type="button">Відхилити</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const GUEST_USERS_KEY = 'mvdefGuestUsers';
+        const GUEST_SESSION_KEY = 'mvdefGuestSession';
+        const BINDING_CODE_KEY = 'mvdefGuestBindingCode';
+        const BINDING_REQUEST_KEY = 'mvdefGuestBindingRequest';
+        const BINDING_ACCEPTED_KEY = 'mvdefGuestBindingAccepted';
+
+        function readGuestUsers() {
+            try { return JSON.parse(localStorage.getItem(GUEST_USERS_KEY) || '[]'); }
+            catch { return []; }
+        }
+
+        function getGuestUser() {
+            const remembered = (() => {
+                try { return JSON.parse(localStorage.getItem(GUEST_SESSION_KEY) || 'null'); }
+                catch { return null; }
+            })();
+            const sessionUuid = sessionStorage.getItem('uuid');
+            const users = readGuestUsers();
+
+            if (remembered?.uuid) {
+                return users.find(user => user.uuid === remembered.uuid) || null;
+            }
+            if (sessionUuid) {
+                return users.find(user => user.uuid === sessionUuid) || null;
+            }
+            return null;
+        }
+
+        function randomCode() {
+            const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let result = '';
+            for (let i = 0; i < 6; i += 1) {
+                result += alphabet[Math.floor(Math.random() * alphabet.length)];
+            }
+            return result.slice(0, 3) + '-' + result.slice(3);
+        }
+
+        function setBindingCode(rawCode) {
+            const code = rawCode || randomCode();
+            localStorage.setItem(BINDING_CODE_KEY, code.replace(/-/g, ''));
+            document.getElementById('bindingCode').value = code;
+            return code;
+        }
+
+        function showStatus(el, text, error = false) {
+            el.textContent = text;
+            el.classList.toggle('error', error);
+        }
+
+        const guestUser = getGuestUser();
+        if (!guestUser) {
+            window.location.href = 'login.html';
+        }
+
+        const codeInput = document.getElementById('bindingCode');
+        const formStatusEl = document.getElementById('formStatus');
+        const requestCard = document.getElementById('requestCard');
+        const requestMessage = document.getElementById('requestMessage');
+
+        const savedCode = localStorage.getItem(BINDING_CODE_KEY);
+        if (savedCode) {
+            setBindingCode(savedCode);
+        } else {
+            setBindingCode(randomCode());
+        }
+
+        const existingRequest = (() => {
+            try { return JSON.parse(localStorage.getItem(BINDING_REQUEST_KEY) || 'null'); }
+            catch { return null; }
+        })();
+
+        if (existingRequest && existingRequest.guestName === guestUser.playerName) {
+            requestCard.classList.add('visible');
+            requestMessage.textContent = `Ви погоджуєте прив'язку Minecraft-профілю до локального облікового запису [${guestUser.playerName} (Г)].`;
+        }
+
+        document.getElementById('bindBtn').addEventListener('click', () => {
+            const password = document.getElementById('guestPassword').value.trim();
+            if (!password) {
+                showStatus(formStatusEl, 'Введи пароль від локального акаунту.', true);
+                return;
+            }
+            if (password !== guestUser.password) {
+                showStatus(formStatusEl, 'Невірний пароль від локального акаунту.', true);
+                return;
+            }
+
+            const request = {
+                guestName: guestUser.playerName,
+                code: codeInput.value.replace(/-/g, ''),
+                status: 'pending',
+                createdAt: Date.now()
+            };
+            localStorage.setItem(BINDING_REQUEST_KEY, JSON.stringify(request));
+            requestCard.classList.add('visible');
+            requestMessage.textContent = `Ви погоджуєте прив'язку Minecraft-профілю до локального облікового запису [${guestUser.playerName} (Г)].`;
+            showStatus(formStatusEl, 'Запит на прив'язку створено. Чекаємо підтвердження в Minecraft.');
+        });
+
+        document.getElementById('acceptRequestBtn').addEventListener('click', () => {
+            localStorage.setItem(BINDING_ACCEPTED_KEY, 'true');
+            localStorage.removeItem(BINDING_REQUEST_KEY);
+            window.location.href = 'resource-split.html';
+        });
+
+        document.getElementById('declineRequestBtn').addEventListener('click', () => {
+            localStorage.removeItem(BINDING_REQUEST_KEY);
+            const freshCode = randomCode();
+            setBindingCode(freshCode);
+            showStatus(formStatusEl, 'Код прив'язки змінено.');
+            requestCard.classList.remove('visible');
+        });
+    </script>
+</body>
+</html>

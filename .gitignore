@@ -1,0 +1,5 @@
+worker/.dev.vars
+worker/.prod-auth-data-key.local
+worker/.wrangler/
+worker/node_modules/
+worker/README.md

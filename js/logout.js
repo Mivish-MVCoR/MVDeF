@@ -6,11 +6,14 @@ const logoutButton = document.getElementById("logoutBtn");
 logoutButton?.addEventListener("click", async event => {
     event.preventDefault();
     try {
-        await signOut(auth);
+        await signOut(auth).catch(() => undefined);
+        localStorage.removeItem("mvdefGuestSession");
         sessionStorage.clear();
         window.location.replace("login.html");
     } catch (error) {
         console.error("Не вдалося завершити сеанс Firebase:", error);
-        window.alert("Не вдалося безпечно завершити сеанс. Перевір підключення та спробуй ще раз.");
+        localStorage.removeItem("mvdefGuestSession");
+        sessionStorage.clear();
+        window.location.replace("login.html");
     }
 });

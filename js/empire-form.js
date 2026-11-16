@@ -5,7 +5,57 @@ import { CLOUDFLARE_API_URL, SITE_SESSION_KEY } from './cloudflare-config.js';
 const uuid = sessionStorage.getItem('uuid');
 const playerName = sessionStorage.getItem('playerName') || 'Гравець';
 const mode = document.body.dataset.empireMode;
+const BINDING_CODE_KEY = 'mvdefGuestBindingCode';
 if (!uuid) window.location.href = 'login.html';
+
+function formatBindingCode(rawCode) {
+    const cleanCode = (rawCode || '').replace(/[^A-Z0-9]/gi, '').slice(0, 6).toUpperCase();
+    if (!cleanCode) return '---';
+    if (cleanCode.length <= 3) return cleanCode;
+    return `${cleanCode.slice(0, 3)}-${cleanCode.slice(3)}`;
+}
+
+function createBindingCode() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let result = '';
+    for (let i = 0; i < 6; i += 1) {
+        result += alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+    return result;
+}
+
+function ensureBindingCode() {
+    const codeInput = document.getElementById('bindingCodeDisplay');
+    if (!codeInput) return;
+    const storedValue = localStorage.getItem(BINDING_CODE_KEY) || '';
+    const nextValue = formatBindingCode(storedValue || createBindingCode());
+    localStorage.setItem(BINDING_CODE_KEY, nextValue.replace(/-/g, ''));
+    codeInput.value = nextValue;
+    return nextValue;
+}
+
+async function copyBindingCode() {
+    const codeInput = document.getElementById('bindingCodeDisplay');
+    const status = document.getElementById('bindingCodeStatus');
+    if (!codeInput || !status) return;
+
+    const value = codeInput.value.replace(/-/g, '');
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(value);
+        } else {
+            codeInput.focus();
+            codeInput.select();
+            document.execCommand('copy');
+        }
+        status.textContent = 'Код скопійовано';
+        status.classList.remove('error');
+    } catch (error) {
+        console.warn('Не вдалося скопіювати код прив’язки:', error);
+        status.textContent = 'Не вдалося скопіювати. Виділіть код вручну.';
+        status.classList.add('error');
+    }
+}
 
 const governmentInfo = {
     monarchy: ['Монархія', 'Влада однієї особи (короля, царя, імператора), яка найчастіше передається у спадок.'],
@@ -254,6 +304,9 @@ document.getElementById('government').addEventListener('change', showGovernmentI
 document.getElementById('organizationLevel').addEventListener('change', event => {
     if (mode === 'edit') configureDangerZone(event.target.value);
 });
+const copyButton = document.getElementById('copyBindingCodeBtn');
+if (copyButton) copyButton.addEventListener('click', copyBindingCode);
+ensureBindingCode();
 if (mode === 'edit') {
     document.getElementById('abdicateButton').addEventListener('click', openDeleteConfirmation);
     document.getElementById('capitulateButton').addEventListener('click', openDeleteConfirmation);

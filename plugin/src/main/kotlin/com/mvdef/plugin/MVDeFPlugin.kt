@@ -10,6 +10,9 @@ import com.mvdef.plugin.players.PlayerCommand
 import com.mvdef.plugin.players.PlayerService
 import com.mvdef.plugin.players.RemovalManager
 import com.mvdef.plugin.protection.ProtectionListener
+import com.mvdef.plugin.rulet.RuletCommand
+import com.mvdef.plugin.rulet.RuletListener
+import com.mvdef.plugin.rulet.RuletManager
 import com.mvdef.plugin.token.TokenService
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -42,6 +45,11 @@ class MVDeFPlugin : JavaPlugin() {
         lockService = LockService(this)
 
         getCommand("/empire")?.setExecutor(EmpireCommand(this, tokenService))
+
+        val ruletManager = RuletManager(this, tokenService)
+        ruletManager.start()
+        getCommand("rulet")?.setExecutor(RuletCommand(ruletManager))
+        server.pluginManager.registerEvents(RuletListener(ruletManager), this)
 
         val lockCommand = LockCommand(lockService)
         getCommand("/ckey")?.setExecutor(lockCommand)

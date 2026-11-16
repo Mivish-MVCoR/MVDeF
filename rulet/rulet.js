@@ -31,6 +31,18 @@ const elements = {
 
 const duelId = new URLSearchParams(window.location.search).get("duel");
 const token = sessionStorage.getItem(SITE_SESSION_KEY);
+const isGuestSession = sessionStorage.getItem("isGuest") === "true";
+const isMinecraftBound = localStorage.getItem("mvdefGuestBindingAccepted") === "true";
+
+if (isGuestSession && !isMinecraftBound) {
+    elements.notice.innerHTML = 'Щоб грати потрібно прив\'язати свій Minecraft-профіль. <a href="../minecraft-bind.html">Прив\'язати</a>';
+    elements.notice.classList.add("error");
+    elements.notice.hidden = false;
+    elements.invitePanel.hidden = true;
+    elements.duelPanel.hidden = true;
+    document.getElementById("openShop").disabled = true;
+} else {
+
 let currentUid = sessionStorage.getItem("uuid");
 let currentDuel = null;
 let currentProfile = null;
@@ -368,4 +380,5 @@ if (!token) {
     window.setInterval(() => {
         refreshProfile().catch(error => showNotice(error.message, true));
     }, 15000);
+}
 }
